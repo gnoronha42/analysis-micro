@@ -335,10 +335,10 @@ app.post('/analise', async (req, res) => {
     );
 
     // Exemplo de uso das funções utilitárias:
-    markdownFinal = removerValoresExemplo(markdownFinal);
-    markdownFinal = limparConcatenacoes(markdownFinal);
-    markdownFinal = reorganizarSecoesAds(markdownFinal);
-    markdownFinal = forcarResumoTecnicoComoTabela(markdownFinal);
+    // markdownFinal = removerValoresExemplo(markdownFinal);
+    // markdownFinal = limparConcatenacoes(markdownFinal);
+    // markdownFinal = reorganizarSecoesAds(markdownFinal);
+    // markdownFinal = forcarResumoTecnicoComoTabela(markdownFinal);
 
     res.json({
       analysis: markdownFinal,
