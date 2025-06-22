@@ -1,6 +1,6 @@
 const express = require('express');
 const fetch = require('node-fetch');
-const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT } = require('./analysis');
+const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
 const cors = require('cors');
 const app = express();
 app.use(cors());
@@ -310,17 +310,23 @@ app.post('/analise', async (req, res) => {
     if (!images || !Array.isArray(images) || images.length === 0) {
       return res.status(400).json({ error: "Imagens são obrigatórias" });
     }
-    if (!analysisType || !["ads", "account"].includes(analysisType)) {
+    if (!analysisType || !["ads", "account", "express"].includes(analysisType)) {
       return res.status(400).json({ error: "Tipo de análise inválido" });
     }
 
-    // Montagem do prompt (adicione seu prompt aqui)
+    // Montagem do prompt
     const reforco =
       "ATENÇÃO: Utilize apenas os valores reais extraídos das imagens abaixo. NUNCA use valores de exemplo do template. Se não conseguir extrair algum valor, escreva exatamente 'Dado não informado'. NÃO repita exemplos do template sob nenhuma circunstância.";
-    const basePrompt =
-      analysisType === "ads"
-        ? `${ADVANCED_ADS_PROMPT}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`
-        : `${ADVANCED_ACCOUNT_PROMPT}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
+    
+    let basePrompt;
+    
+    if (analysisType === "ads") {
+      basePrompt = `${ADVANCED_ADS_PROMPT}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
+    } else if (analysisType === "account") {
+      basePrompt = `${ADVANCED_ACCOUNT_PROMPT}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
+    } else if (analysisType === "express") {
+      basePrompt = `${EXPRESS_ACCOUNT_ANALYSIS}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
+    }
 
     const imageMessages = images.map((img) => ({
       type: "image_url",
