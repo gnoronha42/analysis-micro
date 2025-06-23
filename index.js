@@ -1,6 +1,9 @@
+require('dotenv').config();
+
 const express = require('express');
 const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
+
 const cors = require('cors');
 const app = express();
 app.use(cors());
@@ -250,7 +253,7 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
   for (let tentativa = 1; tentativa <= maxRetries; tentativa++) {
     try {
       const requestBody = {
-        model: "gpt-4-turbo-preview",
+        model: "gpt-4.1", // Troquei para modelo de imagem
         messages,
         max_tokens: 6000,
         temperature: 0,
@@ -265,7 +268,7 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer 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`,
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           },
           body: JSON.stringify(requestBody),
         }
@@ -302,39 +305,6 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
   return "Erro ao gerar análise";
 }
 
-// Função para extrair métricas essenciais das análises
-function extrairMetricasChave(analysisContent) {
-  const metricas = {
-    visitantes: null,
-    pedidos: null,
-    gmv: null,
-    roas: null,
-    conversao: null,
-    ticketMedio: null,
-    investimento: null
-  };
-
-  // Regex patterns para extrair métricas
-  const patterns = {
-    visitantes: /visitantes?\s*:\s*([0-9\.,]+)/i,
-    pedidos: /pedidos?\s*(?:pagos?)?\s*:\s*([0-9\.,]+)/i,
-    gmv: /gmv\s*(?:pago?)?\s*:\s*r\$?\s*([0-9\.,]+)/i,
-    roas: /roas\s*:\s*([0-9\.,]+)/i,
-    conversao: /conversão\s*:\s*([0-9\.,]+)%?/i,
-    ticketMedio: /ticket\s*médio\s*:\s*r\$?\s*([0-9\.,]+)/i,
-    investimento: /investimento\s*(?:em\s*ads?)?\s*:\s*r\$?\s*([0-9\.,]+)/i
-  };
-
-  for (const [key, pattern] of Object.entries(patterns)) {
-    const match = analysisContent.match(pattern);
-    if (match) {
-      metricas[key] = match[1];
-    }
-  }
-
-  return metricas;
-}
-
 // Endpoint principal
 app.post('/analise', async (req, res) => {
   try {
@@ -347,19 +317,15 @@ app.post('/analise', async (req, res) => {
       return res.status(400).json({ error: "Tipo de análise inválido" });
     }
 
-    // Montagem do prompt
+    // Montagem do prompt (adicione seu prompt aqui)
     const reforco =
       "ATENÇÃO: Utilize apenas os valores reais extraídos das imagens abaixo. NUNCA use valores de exemplo do template. Se não conseguir extrair algum valor, escreva exatamente 'Dado não informado'. NÃO repita exemplos do template sob nenhuma circunstância.";
-    
-    let basePrompt;
-    
-    if (analysisType === "ads") {
-      basePrompt = `${ADVANCED_ADS_PROMPT}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
-    } else if (analysisType === "account") {
-      basePrompt = `${ADVANCED_ACCOUNT_PROMPT}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
-    } else if (analysisType === "express") {
-      basePrompt = `${EXPRESS_ACCOUNT_ANALYSIS}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
-    }
+    const basePrompt =
+      analysisType === "ads"
+        ? `${ADVANCED_ADS_PROMPT}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`
+        : analysisType === "account"
+        ? `${ADVANCED_ACCOUNT_PROMPT}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`
+        : `${EXPRESS_ACCOUNT_ANALYSIS}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
 
     const imageMessages = images.map((img) => ({
       type: "image_url",
@@ -393,7 +359,40 @@ app.post('/analise', async (req, res) => {
   }
 });
 
-// Modificar a rota /comparison para usar métricas resumidas:
+// Função para extrair métricas essenciais das análises
+function extrairMetricasChave(analysisContent) {
+  const metricas = {
+    visitantes: null,
+    pedidos: null,
+    gmv: null,
+    roas: null,
+    conversao: null,
+    ticketMedio: null,
+    investimento: null
+  };
+
+  // Regex patterns para extrair métricas
+  const patterns = {
+    visitantes: /visitantes?\s*:\s*([0-9\.,]+)/i,
+    pedidos: /pedidos?\s*(?:pagos?)?\s*:\s*([0-9\.,]+)/i,
+    gmv: /gmv\s*(?:pago?)?\s*:\s*r\$?\s*([0-9\.,]+)/i,
+    roas: /roas\s*:\s*([0-9\.,]+)/i,
+    conversao: /conversão\s*:\s*([0-9\.,]+)%?/i,
+    ticketMedio: /ticket\s*médio\s*:\s*r\$?\s*([0-9\.,]+)/i,
+    investimento: /investimento\s*(?:em\s*ads?)?\s*:\s*r\$?\s*([0-9\.,]+)/i
+  };
+
+  for (const [key, pattern] of Object.entries(patterns)) {
+    const match = analysisContent.match(pattern);
+    if (match) {
+      metricas[key] = match[1];
+    }
+  }
+
+  return metricas;
+}
+
+// Rota de comparação
 app.post('/comparison', async (req, res) => {
   try {
     const { prompt, clientName, analysisType, period, totalAnalyses } = req.body;
@@ -409,23 +408,54 @@ app.post('/comparison', async (req, res) => {
       return res.status(400).json({ error: 'Prompt é obrigatório' });
     }
 
-    // EXTRAIR APENAS AS MÉTRICAS das análises ao invés do texto completo
-    const analysisData = JSON.parse(prompt.match(/ANÁLISES PARA COMPARAÇÃO:\s*\{ANALYSES_DATA\}([\s\S]*?)PERÍODO ANALISADO:/)?.[1] || '[]');
-    
+    // Validar se o tipo é válido
+    if (!analysisType || !["ads", "account", "express"].includes(analysisType)) {
+      console.error('❌ Tipo de análise inválido:', analysisType);
+      return res.status(400).json({ 
+        error: 'Tipo de análise inválido',
+        received: analysisType,
+        valid_types: ["ads", "account", "express"]
+      });
+    }
+
+    // Extrair dados das análises do prompt
+    let analysisData = [];
+    try {
+      // Tentar extrair os dados das análises do prompt
+      const analysisMatch = prompt.match(/ANÁLISE \d+ \((.*?)\):\s*([\s\S]*?)(?=\n---|\nPERÍODO ANALISADO:|$)/g);
+      if (analysisMatch) {
+        analysisData = analysisMatch.map((match, index) => {
+          const dateMatch = match.match(/ANÁLISE \d+ \((.*?)\):/);
+          const contentMatch = match.match(/ANÁLISE \d+ \(.*?\):\s*([\s\S]*?)(?=\n---|\nPERÍODO ANALISADO:|$)/);
+          
+          return {
+            created_at: dateMatch ? dateMatch[1] : `Análise ${index + 1}`,
+            content: contentMatch ? contentMatch[1] : match
+          };
+        });
+      }
+    } catch (parseError) {
+      console.warn('⚠️ Não foi possível extrair dados estruturados, usando prompt completo');
+      analysisData = [{ created_at: 'Dados completos', content: prompt }];
+    }
+
     // Versão resumida do prompt
     const resumedPrompt = `
-🧠 CONSULTOR SÊNIOR SHOPEE - ANÁLISE COMPARATIVA RESUMIDA
+🧠 CONSULTOR SÊNIOR SHOPEE - ANÁLISE COMPARATIVA
 
 Analise a evolução das métricas entre ${totalAnalyses} análises do cliente ${clientName}.
 
-TIPO: ${analysisType}
+TIPO: ${analysisType === 'account' ? 'Conta' : analysisType === 'ads' ? 'Anúncios' : 'Express'}
 PERÍODO: ${period}
 
-DADOS RESUMIDOS DAS ANÁLISES:
+DADOS DAS ANÁLISES:
 ${analysisData.map((analysis, index) => {
   const metricas = extrairMetricasChave(analysis.content || '');
   return `
 ANÁLISE ${index + 1} (${analysis.created_at}):
+${analysis.content ? analysis.content.substring(0, 800) : 'Conteúdo não disponível'}...
+
+MÉTRICAS EXTRAÍDAS:
 - Visitantes: ${metricas.visitantes || 'N/D'}
 - Pedidos: ${metricas.pedidos || 'N/D'}
 - GMV: R$ ${metricas.gmv || 'N/D'}
@@ -436,14 +466,32 @@ ANÁLISE ${index + 1} (${analysis.created_at}):
 `;
 }).join('\n---\n')}
 
-Gere um relatório comparativo focando em:
-1. **Evolução das métricas** - quais melhoraram/pioraram
-2. **Tendências identificadas** - padrões ao longo do tempo
-3. **Insights principais** - 3-5 pontos mais importantes
-4. **Recomendações estratégicas** - ações baseadas na evolução
-5. **Próximos passos** - prioridades para o próximo período
+# 📊 RELATÓRIO COMPARATIVO - ${clientName}
 
-Mantenha o relatório objetivo e acionável.
+## 🎯 RESUMO EXECUTIVO
+Analise a evolução das métricas principais entre as análises, identificando tendências e mudanças significativas.
+
+## 📈 ANÁLISE EVOLUTIVA
+### Métricas de Performance
+Compare as principais métricas entre as análises e identifique padrões.
+
+## 🔍 INSIGHTS PRINCIPAIS
+### 📈 Tendências Positivas
+Liste 3-5 aspectos que melhoraram:
+
+### ⚠️ Pontos de Atenção
+Identifique 3-5 aspectos que pioraram:
+
+### 💡 Oportunidades
+Baseado nos dados históricos:
+
+## 🚀 RECOMENDAÇÕES ESTRATÉGICAS
+Ações baseadas na evolução histórica identificada.
+
+## 🎯 PRÓXIMOS PASSOS
+Prioridades para o próximo período baseadas na análise comparativa.
+
+Gere um relatório objetivo e acionável focando na evolução das métricas.
 `;
 
     console.log('🤖 Enviando versão resumida para OpenAI...');
