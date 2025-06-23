@@ -250,7 +250,7 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
   for (let tentativa = 1; tentativa <= maxRetries; tentativa++) {
     try {
       const requestBody = {
-        model: "gpt-4.1", // Troquei para modelo de imagem
+        model: "gpt-4-turbo-preview",
         messages,
         max_tokens: 6000,
         temperature: 0,
@@ -265,7 +265,7 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            Authorization: `Bearer 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`,
           },
           body: JSON.stringify(requestBody),
         }
@@ -300,6 +300,39 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
     }
   }
   return "Erro ao gerar análise";
+}
+
+// Função para extrair métricas essenciais das análises
+function extrairMetricasChave(analysisContent) {
+  const metricas = {
+    visitantes: null,
+    pedidos: null,
+    gmv: null,
+    roas: null,
+    conversao: null,
+    ticketMedio: null,
+    investimento: null
+  };
+
+  // Regex patterns para extrair métricas
+  const patterns = {
+    visitantes: /visitantes?\s*:\s*([0-9\.,]+)/i,
+    pedidos: /pedidos?\s*(?:pagos?)?\s*:\s*([0-9\.,]+)/i,
+    gmv: /gmv\s*(?:pago?)?\s*:\s*r\$?\s*([0-9\.,]+)/i,
+    roas: /roas\s*:\s*([0-9\.,]+)/i,
+    conversao: /conversão\s*:\s*([0-9\.,]+)%?/i,
+    ticketMedio: /ticket\s*médio\s*:\s*r\$?\s*([0-9\.,]+)/i,
+    investimento: /investimento\s*(?:em\s*ads?)?\s*:\s*r\$?\s*([0-9\.,]+)/i
+  };
+
+  for (const [key, pattern] of Object.entries(patterns)) {
+    const match = analysisContent.match(pattern);
+    if (match) {
+      metricas[key] = match[1];
+    }
+  }
+
+  return metricas;
 }
 
 // Endpoint principal
@@ -356,6 +389,137 @@ app.post('/analise', async (req, res) => {
     res.status(500).json({
       error: error.message || "Erro interno do servidor",
       details: "Falha na geração da análise",
+    });
+  }
+});
+
+// Modificar a rota /comparison para usar métricas resumidas:
+app.post('/comparison', async (req, res) => {
+  try {
+    const { prompt, clientName, analysisType, period, totalAnalyses } = req.body;
+    
+    console.log('🔍 Recebida solicitação de comparação');
+    console.log(`📊 Cliente: ${clientName}`);
+    console.log(`📈 Tipo: ${analysisType}`);
+    console.log(`📅 Período: ${period}`);
+    console.log(`🔢 Total de análises: ${totalAnalyses}`);
+
+    if (!prompt) {
+      console.error('❌ Prompt não fornecido');
+      return res.status(400).json({ error: 'Prompt é obrigatório' });
+    }
+
+    // EXTRAIR APENAS AS MÉTRICAS das análises ao invés do texto completo
+    const analysisData = JSON.parse(prompt.match(/ANÁLISES PARA COMPARAÇÃO:\s*\{ANALYSES_DATA\}([\s\S]*?)PERÍODO ANALISADO:/)?.[1] || '[]');
+    
+    // Versão resumida do prompt
+    const resumedPrompt = `
+🧠 CONSULTOR SÊNIOR SHOPEE - ANÁLISE COMPARATIVA RESUMIDA
+
+Analise a evolução das métricas entre ${totalAnalyses} análises do cliente ${clientName}.
+
+TIPO: ${analysisType}
+PERÍODO: ${period}
+
+DADOS RESUMIDOS DAS ANÁLISES:
+${analysisData.map((analysis, index) => {
+  const metricas = extrairMetricasChave(analysis.content || '');
+  return `
+ANÁLISE ${index + 1} (${analysis.created_at}):
+- Visitantes: ${metricas.visitantes || 'N/D'}
+- Pedidos: ${metricas.pedidos || 'N/D'}
+- GMV: R$ ${metricas.gmv || 'N/D'}
+- ROAS: ${metricas.roas || 'N/D'}
+- Conversão: ${metricas.conversao || 'N/D'}%
+- Ticket Médio: R$ ${metricas.ticketMedio || 'N/D'}
+- Investimento: R$ ${metricas.investimento || 'N/D'}
+`;
+}).join('\n---\n')}
+
+Gere um relatório comparativo focando em:
+1. **Evolução das métricas** - quais melhoraram/pioraram
+2. **Tendências identificadas** - padrões ao longo do tempo
+3. **Insights principais** - 3-5 pontos mais importantes
+4. **Recomendações estratégicas** - ações baseadas na evolução
+5. **Próximos passos** - prioridades para o próximo período
+
+Mantenha o relatório objetivo e acionável.
+`;
+
+    console.log('🤖 Enviando versão resumida para OpenAI...');
+    console.log(`📏 Tamanho do prompt: ${resumedPrompt.length} caracteres`);
+
+    const requestBody = {
+      model: "gpt-4-turbo-preview",
+      messages: [
+        {
+          role: "system",
+          content: "Você é um consultor sênior especializado em análise comparativa de performance para Shopee. Sempre responda em português brasileiro com insights detalhados e acionáveis."
+        },
+        {
+          role: "user", 
+          content: resumedPrompt
+        }
+      ],
+      max_tokens: 4000,
+      temperature: 0.3
+    };
+
+    console.log('📤 Enviando request para OpenAI...');
+
+    const response = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('❌ Erro da OpenAI:', errorData);
+      return res.status(500).json({ 
+        error: 'Erro na API da OpenAI',
+        details: errorData.error?.message || "Erro desconhecido"
+      });
+    }
+
+    const data = await response.json();
+    console.log('✅ Resposta da OpenAI recebida');
+    
+    const comparison = data.choices?.[0]?.message?.content || "";
+    
+    if (!comparison.trim()) {
+      console.error('❌ Resposta vazia da OpenAI');
+      return res.status(500).json({ 
+        error: 'Resposta vazia da OpenAI',
+        details: 'A IA não conseguiu gerar a análise comparativa'
+      });
+    }
+    
+    console.log('✅ Análise comparativa gerada com sucesso');
+    console.log(`📝 Tamanho da resposta: ${comparison.length} caracteres`);
+    
+    res.json({ 
+      comparison: comparison,
+      metadata: {
+        clientName,
+        analysisType,
+        period,
+        totalAnalyses,
+        generatedAt: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao gerar análise comparativa:', error);
+    res.status(500).json({ 
+      error: 'Erro ao processar análise comparativa',
+      details: error.message 
     });
   }
 });
