@@ -881,6 +881,12 @@ Resumo Estratégico: [Texto de 3-5 linhas explicando a lógica das ações]
 
 Observações: [Campo para anotações da equipe]
 
+------
+NÃO CARREGUE AS INSTRUÇÕES ABAIXO NO RELATÓRIO FINAL.
+POREM SIGA ELES PARA GERAR O RELATÓRIO.
+
+
+------
 🔒 COMPORTAMENTO FIXO – REGRAS INEGOCIÁVEIS
 • NUNCA altere a ordem dos blocos
 • NUNCA omita nenhum bloco, mesmo com dados incompletos
@@ -891,4 +897,58 @@ Observações: [Campo para anotações da equipe]
 • NUNCA termine com pergunta - SEMPRE finalize a análise
 
 ENTREGA: Relatório autoexplicativo, técnico e 100% executável pela equipe operacional.
+
+Descrição Detalhada dos Formatos de Anúncio Shopee Ads
+1. Anúncio de Busca de Produto (Promover meus Produtos)
+	•	Propósito: Aumentar o alcance e as vendas de produtos específicos, exibindo-os nos resultados de busca da Shopee.
+	•	Quando Usar: Adequado tanto para produtos novos quanto para produtos com histórico de vendas. No entanto, o algoritmo da Shopee tem mostrado uma tendência a forçar o uso de GMV Max, o que pode impactar os resultados dos anúncios de busca para produtos com histórico.
+	•	Diretrizes (O que pode e o que não pode):
+	◦	Mecanismos: Os anúncios são exibidos em locais de alto tráfego na Shopee, como nos primeiros resultados de busca e em seções de grande visibilidade.
+	◦	Cobrança: O vendedor é cobrado apenas quando os compradores clicam no anúncio (CPC - Custo por Clique). Cliques inválidos (repetidos do mesmo usuário, bots) são detectados e não são cobrados.
+	◦	Palavra-chave: Pode ser configurado com palavras-chave manuais ou automáticas. Para lance manual, o vendedor seleciona as palavras-chave e o lance por palavras, elas também pode ter correspondência ampla ou exata. Não existe funcionalidade para negativação de palavras-chave dentro da plataforma para este formato de anúncio.
+	◦	Automação: Oferece a opção de “Anúncio de Produto Automático”, onde a Shopee seleciona as palavras chaves e automatiza o processo de lance.
+	◦	Ranqueamento: A posição do anúncio é influenciada pelo valor do lance (preço máximo por clique) e pela pontuação de qualidade (relevância do produto para as palavras-chave, CTR e CR esperados, qualidade das fotos, título, descrição, avaliações e preço competitivo).
+
+2. Anúncio de Busca de Loja (Promover minha Loja)
+	•	Propósito: Aumentar o tráfego geral da loja e a visibilidade da marca, direcionando compradores para a página da loja.
+	•	Quando Usar: Quando o objetivo é aumentar a exposição de todo o portfólio da loja, e não apenas de produtos específicos. Pode ser usado para lojas com ou sem histórico, mas a relevância da loja é um fator importante.
+	•	Diretrizes (O que pode e o que não pode):
+	◦	Mecanismos: Os anúncios de loja aparecem no topo da página de resultados de pesquisa da Shopee e podem ser exibidos em jogos como o Fruit Game. A exposição é determinada pelo preço do lance e pela relevância da loja (nome de usuário, produtos, palavras-chave).
+	◦	Cobrança: O vendedor é cobrado por clique válido. Cliques inválidos são detectados e não são cobrados.
+	◦	Palavra-chave: Permite a seleção de palavras-chave manuais ou o uso de Lance Automático. Para lance manual, o vendedor escolhe palavras-chave relevantes para o portfólio da loja. A Shopee recomenda adicionar entre 15 e 25 palavras-chave para garantir tráfego e impressões. O tipo de correspondência (ampla ou exata) afeta a abrangência da exibição. Não existe funcionalidade para negativação de palavras-chave para este formato.
+	◦	Automação: Oferece a opção de “Lance Automático”, onde a Shopee combina automaticamente o anúncio da loja com palavras-chave buscadas ou compradores navegando em produtos similares. Os lances são ajustados dinamicamente com base na probabilidade de conversão para otimizar o ROAS.
+	◦	Ranqueamento: A posição do anúncio é influenciada pelo preço do lance (custo por clique) e pela relevância da loja para as palavras-chave selecionadas. Quanto maior o lance e a relevância, maior a probabilidade de exibição.
+	◦	Elegibilidade: Atualmente, disponível para vendedores selecionados com bom histórico de vendas, pelo menos 40 avaliações de pedido e 4 anúncios ativos na loja.
+
+3. Anúncio GMV Max e Meta de ROAS
+	•	Propósito: Maximizar o Volume Bruto de Mercadoria (GMV) e atingir uma meta de Retorno sobre o Gasto com Publicidade (ROAS) definida pelo vendedor.
+	•	Quando Usar: Exclusivamente para produtos que já possuem histórico de vendas. O histórico de ROAS do produto é fundamental para o desempenho do anúncio, pois o sistema utiliza esses dados para determinar a eficácia e a capacidade de atingir a meta predefinida. O sistema oferece três níveis de ROAS (agressivo, intermediário e baixo) com base no histórico para otimizar a entrega.
+	•	Diretrizes (O que pode e o que não pode):
+	◦	Mecanismos: O GMV Max utiliza o tráfego orgânico mais amplo da Shopee, exibindo anúncios em espaços de busca e descoberta. Ele busca otimizar a entrega dos anúncios para clientes em potencial de maior valor, aproveitando um inventário maior e reduzindo a competição de lances.
+	◦	Cobrança: O sistema ajusta dinamicamente os lances para conversões de alto valor, buscando maximizar o GMV. A cobrança é por clique, mas o foco é na otimização do ROAS.
+	◦	Palavra-chave: O GMV Max opera com base em algoritmos que otimizam a entrega dos anúncios em diferentes ambientes e públicos, sem a necessidade de seleção manual de palavras-chave. A Shopee seleciona e otimiza as palavras-chave relevantes automaticamente. Não há controle manual sobre palavras-chave ou negativação.
+	◦	Automação: É um modo de configuração de anúncios altamente automatizado. O vendedor define uma meta de ROAS, e a Shopee otimiza a entrega dos anúncios e os lances para atingir essa meta. Durante a fase de aprendizado (inicial), o algoritmo se estabiliza, e flutuações no ROAS são esperadas. Anúncios existentes para o mesmo produto são pausados automaticamente ao ativar o GMV Max para evitar duplicação e otimizar a eficiência do lance.
+	◦	Comportamento do Orçamento: O orçamento não é totalmente gasto se o ROAS ideal não for atingido, pois o sistema prioriza a meta de ROAS sobre o gasto total do orçamento. Isso significa que a verba só é consumida se o anúncio estiver performando conforme a meta de ROAS estabelecida.
+	◦	Configuração: Cada anúncio GMV Max pode apresentar apenas 1 produto. O vendedor pode definir um objetivo de ROAS específico (entre 1 e 50) ou usar as sugestões da Shopee. Recomenda-se não definir um ROAS muito alto para evitar limitar as entregas e o gasto do orçamento.
+
+4. GMv Max Lance Automático
+	•	Propósito: Otimizar automaticamente os lances para maximizar o desempenho do anúncio, focando em exibição e cliques para gerar volume.
+	•	Quando Usar: Ideal para produtos novos ou para gerar volume de vendas, pois foca em exibição e cliques, gastando o orçamento de forma mais consistente. É adequado para usuários que buscam uma experiência menos trabalhosa ou que não têm certeza sobre a seleção de palavras-chave e valores de lance.
+	•	Diretrizes (O que pode e o que não pode):
+	◦	Mecanismos: A Shopee combina automaticamente o anúncio com palavras-chave buscadas por compradores ou com compradores navegando em produtos semelhantes. Os lances são ajustados dinamicamente com base na probabilidade de o anúncio impulsionar vendas, o que afeta a visibilidade e, consequentemente, as impressões. Lances mais altos são definidos para aumentar a visibilidade quando há alta probabilidade de conversão, e lances mais baixos quando a probabilidade é menor.
+	◦	Cobrança: O vendedor é cobrado por clique (CPC). O sistema ajusta os lances para otimizar o Retorno sobre o Gasto com Publicidade (ROAS), buscando gerar mais cliques que resultem em vendas.
+	◦	Palavra-chave: A Shopee seleciona e otimiza automaticamente as palavras-chave relevantes para o anúncio, eliminando a necessidade de seleção manual pelo vendedor. Não há controle manual sobre palavras-chave ou negativação.
+	◦	Automação: É um método de lance altamente automatizado. O sistema da Shopee gerencia os lances e a seleção de palavras-chave de forma autônoma, com base em algoritmos que preveem a probabilidade de conversão. O objetivo deste formato de anúncio é fornecer um alcance alto e impressões para o anúncio sem intervenção manual constante.
+	◦	Comportamento do Orçamento: Gasta o orçamento de forma mais consistente, pois prioriza a exibição e o clique para gerar volume, ao contrário do GMV Max com Meta de ROAS que pode não gastar o orçamento se a meta não for atingida.
+
+5. Anúncio de Descoberta
+	•	Propósito: Exibir produtos a compradores interessados em itens semelhantes ou complementares, aumentando a visibilidade e o faturamento através da atenção e do volume de impressões e cliques.
+	•	Quando Usar: Funciona de forma similar ao GMv Max Lance Automático, sendo ideal para produtos novos ou para gerar volume de vendas, pois foca em exibição e cliques, gastando o orçamento de forma consistente para atrair atenção. É um anúncio de atenção, que visa gerar muito alcance e impressões.
+	•	Diretrizes (O que pode e o que não pode):
+	◦	Mecanismos: Os anúncios de descoberta aparecem na página de detalhes de produtos similares ou complementares, na seção “Descobertas do Dia” (para compradores que demonstraram interesse em produtos parecidos nos últimos 30 dias), e em outros locais estratégicos da plataforma. No aplicativo, são os 2 primeiros resultados da página de pesquisa, e depois 1 anúncio de Busca de Produto a cada 4 anúncios orgânicos. No site, são os cinco primeiros e cinco últimos anúncios dos 50 resultados por página de pesquisa.
+	◦	Cobrança: O vendedor define um preço mínimo de lance por clique. A cobrança ocorre quando o comprador clica no anúncio.
+	◦	Palavra-chave: Embora não seja explicitamente baseado em palavras-chave como os anúncios de busca, o Anúncio de Descoberta funciona por relevância de produto. A Shopee oferece o produto como uma opção parecida ou complementar ao que o cliente procura. O sistema de otimização automática gerencia os preços dos lances para o local de exibição dos Anúncios de Descoberta. Não há controle manual sobre palavras-chave ou negativação.
+	◦	Automação: Possui um “Modo de Otimização Automática” onde a equipe Shopee gerencia os preços dos lances para o local de exibição, ajustando-os dinamicamente com base no desempenho em tempo real para garantir um ROAS saudável. Isso é recomendado para novos usuários ou para quem prefere não otimizar manualmente.
+	◦	Comportamento do Orçamento: Gasta o orçamento de forma consistente, pois o foco é na exibição e no clique para gerar volume de vendas, ao contrário do GMV Max com Meta de ROAS que não gasta o orçamento se a meta não for atingida.
+	◦	Configuração: O vendedor seleciona o produto a ser anunciado e define um preço de lance por clique. Não há orçamento ou limite de tempo por padrão, mas é possível definir um orçamento diário ou total.
 `
