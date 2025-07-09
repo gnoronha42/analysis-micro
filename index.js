@@ -11,6 +11,27 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 
+function calcularCPA(markdown) {
+  
+  const investimentoMatch = markdown.match(/(?:Investimento em Ads|Investimento total em Ads)\s*[:|]\s*R\$\s*([\d.,]+)/i);
+  
+  const pedidosMatch = markdown.match(/(?:Pedidos Pagos(?:\s*Mês)?|Pedidos via Ads)\s*[:|]\s*(\d+)/i);
+
+  if (investimentoMatch && pedidosMatch) {
+    const investimento = parseFloat(investimentoMatch[1].replace(/\./g, '').replace(',', '.'));
+    const pedidos = parseInt(pedidosMatch[1]);
+
+    if (pedidos > 0) {
+      const cpa = (investimento / pedidos).toFixed(2);
+      
+      return markdown.replace(
+        /(CPA\s*(?:Médio|via Ads|geral)?\s*[:|])\s*(?:Dado não informado|R\$\s*[\d.,]+)/gi,
+        `$1 R$${cpa.replace('.', ',')}`
+      );
+    }
+  }
+  return markdown;
+}
 
 async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTexts, maxRetries = 1) {
   console.log('===== INICIANDO GERAÇÃO DE ANÁLISE =====');
@@ -72,6 +93,8 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
       ) {
         markdownGerado = "";
       }
+
+     
 
       return markdownGerado;
     } catch (error) {
