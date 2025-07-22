@@ -328,12 +328,18 @@ hr {
     
     // Configuração específica para Render
     const launchOptions = {
-      executablePath: '/opt/google/chrome/google-chrome',
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      defaultViewport: { width: 1280, height: 720 },
-      timeout: 60000
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
+      headless: 'new', // Usar o novo modo headless
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process'
+      ],
+      timeout: 30000
     };
+    
 
     // Tenta encontrar o Chrome instalado pelo puppeteer
     try {
