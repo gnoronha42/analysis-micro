@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: microservico-analise
+    env: node
+    buildCommand: npm install && npx puppeteer browsers install chrome
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
