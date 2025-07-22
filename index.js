@@ -328,14 +328,14 @@ hr {
     
     // Configuração específica para Render
     const launchOptions = {
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
-      headless: 'new', // Usar o novo modo headless
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome',
+      headless: 'new',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process'
+        '--single-process',
+        '--no-zygote'
       ],
       timeout: 30000
     };
