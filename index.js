@@ -5,7 +5,8 @@ const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
 const { processarComparacao } = require('./comparison');
 const { marked } = require('marked');
-const chromium = require('chrome-aws-lambda');
+const { chromium } = require('playwright');
+
 const puppeteer = require('puppeteer-core');
 
 const cors = require('cors');
