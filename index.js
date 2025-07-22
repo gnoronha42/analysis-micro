@@ -5,7 +5,7 @@ const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
 const { processarComparacao } = require('./comparison');
 const { marked } = require('marked');
-const { chromium } = require('playwright');
+const { chromium } = require('chrome-aws-lambda');
 
 const puppeteer = require('puppeteer-core');
 
@@ -310,10 +310,10 @@ hr {
   const browser = await puppeteer.launch({
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath || '/usr/bin/chromium-browser',
+    executablePath: await chromium.executablePath || '/usr/bin/google-chrome',
     headless: chromium.headless,
-    ignoreHTTPSErrors: true,
   });
+
   
   const page = await browser.newPage();
 
