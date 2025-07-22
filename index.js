@@ -5,20 +5,14 @@ const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
 const { processarComparacao } = require('./comparison');
 const { marked } = require('marked');
-
-
 const puppeteer = require('puppeteer');
-
 const cors = require('cors');
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-
 function calcularCPA(markdown) {
-
   const investimentoMatch = markdown.match(/(?:Investimento em Ads|Investimento total em Ads)\s*[:|]\s*R\$\s*([\d.,]+)/i);
-
   const pedidosMatch = markdown.match(/(?:Pedidos Pagos(?:\s*Mês)?|Pedidos via Ads)\s*[:|]\s*(\d+)/i);
 
   if (investimentoMatch && pedidosMatch) {
@@ -27,7 +21,6 @@ function calcularCPA(markdown) {
 
     if (pedidos > 0) {
       const cpa = (investimento / pedidos).toFixed(2);
-
       return markdown.replace(
         /(CPA\s*(?:Médio|via Ads|geral)?\s*[:|])\s*(?:Dado não informado|R\$\s*[\d.,]+)/gi,
         `$1 R$${cpa.replace('.', ',')}`
@@ -98,8 +91,6 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
         markdownGerado = "";
       }
 
-
-
       return markdownGerado;
     } catch (error) {
       console.error('Erro ao gerar análise (tentativa', tentativa, "):", error);
@@ -158,8 +149,6 @@ app.post('/analise', async (req, res) => {
   }
 });
 
-
-
 function protegerTopicosImportantes(markdown) {
   const titulosImportantes = [
     "RESUMO TÉCNICO",
@@ -170,7 +159,6 @@ function protegerTopicosImportantes(markdown) {
   titulosImportantes.forEach(titulo => {
     const regex = new RegExp(`(##+\\s*${titulo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?)(?=\\n##|$)`, 'gi');
     markdown = markdown.replace(regex, match => {
-      // Garante que o título esteja com "##" pra destacar corretamente
       let corrigido = match;
       if (!match.trim().startsWith('##')) {
         corrigido = '## ' + match.trim();
@@ -196,7 +184,6 @@ function protegerBlocosFixos(markdown) {
     });
   }
 
-  // Protege listas numeradas de sugestões do analista
   markdown = markdown.replace(
     /(Sugestão Técnica e detalhada do Analista:[\s\S]+?)(?=\n\n|\n##|$)/g,
     match => `<div class="avoid-break">\n${match.trim()}\n</div>`
@@ -204,9 +191,6 @@ function protegerBlocosFixos(markdown) {
 
   return markdown;
 }
-
-
-
 
 async function gerarPdfDoMarkdown(markdown, clientName, analysisType) {
   const htmlContent = `
@@ -296,9 +280,6 @@ hr {
   border-radius: 6px;
   margin: 30px 0 10px;
 }
-
-
-        
         </style>
       </head>
       <body>
@@ -307,45 +288,90 @@ hr {
     </html>
   `;
 
-  // Configuração para Render/produção
-  const browser = await puppeteer.launch({
-    headless: 'new', // Use 'new' em vez de true
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--single-process', // Para economizar memória
-      '--disable-gpu'
-    ],
-    defaultViewport: { width: 1280, height: 720 }
-  });
-
+  let browser = null;
   
-  const page = await browser.newPage();
+  try {
+    // Configuração específica para Render
+    const launchOptions = {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--disable-images',
+        '--disable-javascript',
+        '--virtual-time-budget=1000',
+        '--run-all-compositor-stages-before-draw',
+        '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection'
+      ],
+      defaultViewport: { width: 1280, height: 720 },
+      timeout: 30000
+    };
 
-  await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    // Tenta encontrar o Chrome instalado pelo puppeteer
+    try {
+      const chromePath = puppeteer.executablePath();
+      console.log('Chrome encontrado em:', chromePath);
+      launchOptions.executablePath = chromePath;
+    } catch (error) {
+      console.log('Usando Chrome padrão do sistema:', error.message);
+      // Remove executablePath para usar o Chrome do sistema
+    }
 
-  // Ajuste formato papel e margens conforme desejar
-  const pdfBuffer = await page.pdf({
-    format: 'a4',
-    printBackground: true,
-    margin: { top: '20px', bottom: '20px', left: '15px', right: '15px' },
-  });
+    console.log('Iniciando Puppeteer com opções:', launchOptions);
+    browser = await puppeteer.launch(launchOptions);
+    
+    const page = await browser.newPage();
+    
+    // Configura timeouts mais generosos
+    page.setDefaultTimeout(30000);
+    page.setDefaultNavigationTimeout(30000);
+    
+    await page.setContent(htmlContent, { 
+      waitUntil: 'domcontentloaded',
+      timeout: 30000 
+    });
 
-  await browser.close();
+    const pdfBuffer = await page.pdf({
+      format: 'a4',
+      printBackground: true,
+      margin: { top: '20px', bottom: '20px', left: '15px', right: '15px' },
+      timeout: 30000
+    });
 
-  return pdfBuffer;
+    console.log('PDF gerado com sucesso, tamanho:', pdfBuffer.length, 'bytes');
+    return pdfBuffer;
+
+  } catch (error) {
+    console.error('Erro ao gerar PDF:', error);
+    throw new Error(`Falha na geração do PDF: ${error.message}`);
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (closeError) {
+        console.error('Erro ao fechar browser:', closeError);
+      }
+    }
+  }
 }
-
 
 app.post('/analisepdf', async (req, res) => {
   try {
     const { markdown, analysisType, clientName } = req.body;
 
-    // Validação básica
     if (!markdown || !analysisType || !clientName) {
       return res.status(400).json({ error: "Campos obrigatórios ausentes" });
     }
@@ -354,14 +380,12 @@ app.post('/analisepdf', async (req, res) => {
       return res.status(400).json({ error: "Tipo de análise inválido" });
     }
 
-    // Opcional: Atualiza CPA no markdown, se desejar
     let markdownFinal = calcularCPA(markdown);
     markdownFinal = protegerTopicosImportantes(markdownFinal);
     markdownFinal = protegerBlocosFixos(markdownFinal);
-    // Gera o PDF com Puppeteer
+
     const pdfBuffer = await gerarPdfDoMarkdown(markdownFinal, clientName, analysisType);
 
-    // Define headers para envio do PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
@@ -371,7 +395,7 @@ app.post('/analisepdf', async (req, res) => {
     return res.send(pdfBuffer);
 
   } catch (error) {
-    console.error(error);
+    console.error('Erro na geração de PDF:', error);
     res.status(500).json({
       error: error.message || "Erro interno do servidor",
       details: "Falha na geração da análise",
@@ -379,15 +403,12 @@ app.post('/analisepdf', async (req, res) => {
   }
 });
 
-
-
 app.post('/comparison', async (req, res) => {
   try {
     console.log('🔍 Recebida solicitação de comparação');
     console.log('📊 Dados recebidos:', JSON.stringify(req.body, null, 2));
 
     const resultado = await processarComparacao(req.body);
-
     res.json(resultado);
 
   } catch (error) {
