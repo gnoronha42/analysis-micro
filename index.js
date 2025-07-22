@@ -308,10 +308,9 @@ hr {
   `;
 
   const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath || '/usr/bin/google-chrome',
-    headless: chromium.headless,
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    executablePath: "/usr/bin/google-chrome", // ou use whereis google-chrome no container
   });
 
   
