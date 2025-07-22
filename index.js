@@ -8,8 +8,41 @@ const { marked } = require('marked');
 const puppeteer = require('puppeteer');
 const cors = require('cors');
 const app = express();
-app.use(cors());
+
+// Configuração CORS mais específica
+const corsOptions = {
+  origin: [
+    'https://shoppe-ai-9px3.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://localhost:3000',
+    /\.vercel\.app$/,
+    /\.netlify\.app$/
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
+
+// Middleware adicional para headers CORS em todas as respostas
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Responde imediatamente para requisições OPTIONS (preflight)
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+});
 
 function calcularCPA(markdown) {
   const investimentoMatch = markdown.match(/(?:Investimento em Ads|Investimento total em Ads)\s*[:|]\s*R\$\s*([\d.,]+)/i);
@@ -102,6 +135,23 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
   }
   return "Erro ao gerar análise";
 }
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    service: 'microservico-analise'
+  });
+});
+
+// Endpoint para testar CORS
+app.get('/test-cors', (req, res) => {
+  res.status(200).json({ 
+    message: 'CORS está funcionando!',
+    origin: req.headers.origin
+  });
+});
 
 app.post('/analise', async (req, res) => {
   try {
@@ -291,6 +341,8 @@ hr {
   let browser = null;
   
   try {
+    console.log('🚀 Iniciando geração de PDF...');
+    
     // Configuração específica para Render
     const launchOptions = {
       headless: true,
@@ -307,98 +359,185 @@ hr {
         '--disable-extensions',
         '--disable-plugins',
         '--disable-images',
-        '--disable-javascript',
-        '--virtual-time-budget=1000',
+        '--virtual-time-budget=5000',
         '--run-all-compositor-stages-before-draw',
         '--disable-background-timer-throttling',
         '--disable-renderer-backgrounding',
         '--disable-backgrounding-occluded-windows',
         '--disable-features=TranslateUI',
-        '--disable-ipc-flooding-protection'
+        '--disable-ipc-flooding-protection',
+        '--memory-pressure-off'
       ],
       defaultViewport: { width: 1280, height: 720 },
-      timeout: 30000
+      timeout: 60000
     };
 
     // Tenta encontrar o Chrome instalado pelo puppeteer
     try {
       const chromePath = puppeteer.executablePath();
-      console.log('Chrome encontrado em:', chromePath);
+      console.log('✅ Chrome encontrado em:', chromePath);
       launchOptions.executablePath = chromePath;
     } catch (error) {
-      console.log('Usando Chrome padrão do sistema:', error.message);
-      // Remove executablePath para usar o Chrome do sistema
+      console.log('⚠️  Usando Chrome padrão do sistema:', error.message);
     }
 
-    console.log('Iniciando Puppeteer com opções:', launchOptions);
+    console.log('🔧 Iniciando Puppeteer...');
     browser = await puppeteer.launch(launchOptions);
     
     const page = await browser.newPage();
     
     // Configura timeouts mais generosos
-    page.setDefaultTimeout(30000);
-    page.setDefaultNavigationTimeout(30000);
+    page.setDefaultTimeout(60000);
+    page.setDefaultNavigationTimeout(60000);
     
+    console.log('📄 Carregando conteúdo HTML...');
     await page.setContent(htmlContent, { 
       waitUntil: 'domcontentloaded',
-      timeout: 30000 
+      timeout: 60000 
     });
 
+    console.log('🖨️  Gerando PDF...');
     const pdfBuffer = await page.pdf({
       format: 'a4',
       printBackground: true,
       margin: { top: '20px', bottom: '20px', left: '15px', right: '15px' },
-      timeout: 30000
+      timeout: 60000,
+      preferCSSPageSize: false
     });
 
-    console.log('PDF gerado com sucesso, tamanho:', pdfBuffer.length, 'bytes');
+    console.log('✅ PDF gerado com sucesso, tamanho:', pdfBuffer.length, 'bytes');
     return pdfBuffer;
 
   } catch (error) {
-    console.error('Erro ao gerar PDF:', error);
-    throw new Error(`Falha na geração do PDF: ${error.message}`);
+    console.error('❌ Erro detalhado ao gerar PDF:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    // Retorna erro mais específico baseado no tipo de erro
+    if (error.message.includes('Protocol error')) {
+      throw new Error('Erro de protocolo do Puppeteer. Serviço pode estar sobrecarregado.');
+    } else if (error.message.includes('Navigation timeout')) {
+      throw new Error('Timeout na navegação. Conteúdo muito grande ou serviço lento.');
+    } else if (error.message.includes('Target closed')) {
+      throw new Error('Navegador foi fechado inesperadamente.');
+    } else {
+      throw new Error(`Falha na geração do PDF: ${error.message}`);
+    }
   } finally {
     if (browser) {
       try {
+        console.log('🔒 Fechando navegador...');
         await browser.close();
       } catch (closeError) {
-        console.error('Erro ao fechar browser:', closeError);
+        console.error('⚠️  Erro ao fechar browser:', closeError);
       }
     }
   }
 }
 
 app.post('/analisepdf', async (req, res) => {
+  console.log('📥 Recebida requisição para geração de PDF');
+  console.log('🌐 Origin:', req.headers.origin);
+  console.log('📊 Body size:', JSON.stringify(req.body).length, 'chars');
+  
   try {
     const { markdown, analysisType, clientName } = req.body;
 
-    if (!markdown || !analysisType || !clientName) {
-      return res.status(400).json({ error: "Campos obrigatórios ausentes" });
+    // Validação de entrada melhorada
+    if (!markdown || typeof markdown !== 'string') {
+      console.log('❌ Markdown ausente ou inválido');
+      return res.status(400).json({ 
+        error: "Markdown é obrigatório e deve ser uma string",
+        received: typeof markdown
+      });
+    }
+
+    if (!analysisType || typeof analysisType !== 'string') {
+      console.log('❌ AnalysisType ausente ou inválido');
+      return res.status(400).json({ 
+        error: "Tipo de análise é obrigatório",
+        received: typeof analysisType
+      });
+    }
+
+    if (!clientName || typeof clientName !== 'string') {
+      console.log('❌ ClientName ausente ou inválido');
+      return res.status(400).json({ 
+        error: "Nome do cliente é obrigatório",
+        received: typeof clientName
+      });
     }
 
     if (!["ads", "account", "express"].includes(analysisType)) {
-      return res.status(400).json({ error: "Tipo de análise inválido" });
+      console.log('❌ Tipo de análise inválido:', analysisType);
+      return res.status(400).json({ 
+        error: "Tipo de análise inválido",
+        validTypes: ["ads", "account", "express"],
+        received: analysisType
+      });
     }
 
+    console.log('✅ Validação passou - processando PDF...');
+    console.log('👤 Cliente:', clientName);
+    console.log('📋 Tipo:', analysisType);
+    console.log('📝 Markdown length:', markdown.length);
+
+    // Processa o markdown
     let markdownFinal = calcularCPA(markdown);
     markdownFinal = protegerTopicosImportantes(markdownFinal);
     markdownFinal = protegerBlocosFixos(markdownFinal);
 
+    console.log('🔧 Markdown processado, iniciando geração de PDF...');
+
+    // Gera o PDF
     const pdfBuffer = await gerarPdfDoMarkdown(markdownFinal, clientName, analysisType);
 
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      throw new Error('PDF gerado está vazio');
+    }
+
+    console.log('✅ PDF gerado com sucesso!');
+
+    // Define headers para o PDF
+    const filename = `${clientName.replace(/[^a-zA-Z0-9]/g, '_')}-${analysisType}-relatorio.pdf`;
+    
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename=${clientName}-${analysisType}-relatorio.pdf`
-    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
 
     return res.send(pdfBuffer);
 
   } catch (error) {
-    console.error('Erro na geração de PDF:', error);
-    res.status(500).json({
-      error: error.message || "Erro interno do servidor",
-      details: "Falha na geração da análise",
+    console.error('❌ Erro completo na geração de PDF:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      timestamp: new Date().toISOString()
+    });
+
+    // Retorna erro específico baseado no tipo
+    let statusCode = 500;
+    let errorMessage = "Erro interno do servidor";
+    
+    if (error.message.includes('Validation')) {
+      statusCode = 400;
+      errorMessage = "Dados de entrada inválidos";
+    } else if (error.message.includes('timeout')) {
+      statusCode = 504;
+      errorMessage = "Timeout na geração do PDF";
+    } else if (error.message.includes('memory')) {
+      statusCode = 507;
+      errorMessage = "Erro de memória insuficiente";
+    }
+
+    res.status(statusCode).json({
+      error: errorMessage,
+      details: error.message,
+      timestamp: new Date().toISOString(),
+      service: 'microservico-analise'
     });
   }
 });
@@ -420,7 +559,42 @@ app.post('/comparison', async (req, res) => {
   }
 });
 
+// Middleware global de tratamento de erros
+app.use((err, req, res, next) => {
+  console.error('🚨 Erro não capturado:', {
+    message: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
+
+  res.status(500).json({
+    error: 'Erro interno do servidor',
+    details: process.env.NODE_ENV === 'development' ? err.message : 'Erro inesperado',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Middleware para rotas não encontradas
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Endpoint não encontrado',
+    path: req.originalUrl,
+    method: req.method,
+    availableEndpoints: [
+      'GET /health',
+      'GET /test-cors',
+      'POST /analise',
+      'POST /analisepdf',
+      'POST /comparison'
+    ]
+  });
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`Microserviço de análise rodando na porta ${PORT}`);
+  console.log(`🚀 Microserviço de análise rodando na porta ${PORT}`);
+  console.log(`🌐 Health check disponível em: http://localhost:${PORT}/health`);
+  console.log(`🔧 CORS test disponível em: http://localhost:${PORT}/test-cors`);
 });
