@@ -328,7 +328,7 @@ hr {
     
     // Configuração específica para Render
     const launchOptions = {
-      executablePath: '/usr/bin/google-chrome-stable',
+      executablePath: '/opt/google/chrome/google-chrome',
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: { width: 1280, height: 720 },
