@@ -5,9 +5,9 @@ const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
 const { processarComparacao } = require('./comparison');
 const { marked } = require('marked');
-const { chromium } = require('chrome-aws-lambda');
 
-const puppeteer = require('puppeteer-core');
+
+const puppeteer = require('puppeteer');
 
 const cors = require('cors');
 const app = express();
@@ -307,11 +307,20 @@ hr {
     </html>
   `;
 
+  // Configuração para Render/produção
   const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath, // NÃO fixe o path
-    headless: chromium.headless,
+    headless: 'new', // Use 'new' em vez de true
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process', // Para economizar memória
+      '--disable-gpu'
+    ],
+    defaultViewport: { width: 1280, height: 720 }
   });
 
   
