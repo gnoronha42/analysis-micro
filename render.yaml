@@ -2,9 +2,17 @@ services:
   - type: web
     name: microservico-analise
     env: node
-    buildCommand: npm install && npx puppeteer browsers install chrome
+    buildCommand: npm install
     startCommand: npm start
     plan: free
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
+        value: false
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/.cache/puppeteer
+    disk:
+      name: puppeteer-cache
+      mountPath: /opt/render/.cache
+      sizeGB: 1
