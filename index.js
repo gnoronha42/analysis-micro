@@ -16,8 +16,7 @@ const corsOptions = {
     'http://localhost:3000',
     'http://localhost:3001',
     'https://localhost:3000',
-    /\.vercel\.app$/,
-    /\.netlify\.app$/
+    
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -560,23 +559,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Middleware para rotas não encontradas
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'Endpoint não encontrado',
-    path: req.originalUrl,
-    method: req.method,
-    availableEndpoints: [
-      'POST /analise',
-      'POST /analisepdf',
-      'POST /comparison'
-    ]
-  });
-});
+
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Microserviço de análise rodando na porta ${PORT}`);
-  console.log(`🌐 Health check disponível em: http://localhost:${PORT}/health`);
-  console.log(`🔧 CORS test disponível em: http://localhost:${PORT}/test-cors`);
+ 
 });
