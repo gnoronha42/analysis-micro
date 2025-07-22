@@ -1,38 +1,62 @@
-# Base image com Node e Debian
-FROM node:18-slim
+# Dockerfile para Render com Puppeteer + Chrome
+FROM node:20-slim
 
-# Instala Chromium
-RUN apt-get update && \
-    apt-get install -y \
-    chromium \
+# Instala dependências essenciais
+RUN apt-get update && apt-get install -y \
+    wget \
     ca-certificates \
     fonts-liberation \
     libappindicator3-1 \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
+    libc6 \
+    libcairo2 \
     libcups2 \
     libdbus-1-3 \
-    libxcomposite1 \
-    libxrandr2 \
-    libxdamage1 \
-    libxss1 \
+    libexpat1 \
+    libfontconfig1 \
+    libgbm1 \
+    libgcc1 \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libnspr4 \
     libnss3 \
+    libpango-1.0-0 \
+    libx11-6 \
     libx11-xcb1 \
+    libxcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxi6 \
+    libxrandr2 \
+    libxrender1 \
+    libxss1 \
     libxtst6 \
-    wget \
-    --no-install-recommends && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    lsb-release \
+    xdg-utils \
+    && rm -rf /var/lib/apt/lists/*
 
-# Define a variável do Puppeteer para usar o Chrome do sistema
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-
+# Cria diretório de trabalho
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
+# Copia arquivos do projeto
 COPY . .
 
+# Instala dependências do projeto
+RUN npm install
+
+# Instala o Chrome usado pelo Puppeteer manualmente
+RUN npx puppeteer browsers install chrome
+
+# Define a variável de ambiente com o caminho correto
+ENV PUPPETEER_EXECUTABLE_PATH=/root/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome
+
+# Expõe porta (ajuste se necessário)
 EXPOSE 3000
+
+# Comando para iniciar o app
 CMD ["npm", "start"]
