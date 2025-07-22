@@ -5,7 +5,9 @@ const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
 const { processarComparacao } = require('./comparison');
 const { marked } = require('marked');
-const puppeteer = require('puppeteer');
+const chromium = require('chrome-aws-lambda');
+const puppeteer = require('puppeteer-core');
+
 const cors = require('cors');
 const app = express();
 app.use(cors());
@@ -305,8 +307,13 @@ hr {
   `;
 
   const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox'], // se for rodar no Docker ou server linux
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath || '/usr/bin/chromium-browser',
+    headless: chromium.headless,
+    ignoreHTTPSErrors: true,
   });
+  
   const page = await browser.newPage();
 
   await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
