@@ -5,7 +5,7 @@ const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
 const { processarComparacao } = require('./comparison');
 const { marked } = require('marked');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const cors = require('cors');
 const app = express();
 
@@ -331,7 +331,6 @@ hr {
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-
       defaultViewport: { width: 1280, height: 720 },
       timeout: 60000
     };
