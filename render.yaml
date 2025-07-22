@@ -5,10 +5,4 @@ services:
     plan: starter
     buildCommand: npm install
     startCommand: npm start
-    envVars:
-      # REMOVA PUPPETEER_SKIP_CHROMIUM_DOWNLOAD ou deixe em vazio
-      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
-        value: "" # vazio para garantir download
-      - key: PUPPETEER_CACHE_DIR
-        value: /opt/render/.cache/puppeteer
-      # Remova PUPPETEER_EXECUTABLE_PATH para usar padrão
+  

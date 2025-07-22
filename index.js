@@ -329,28 +329,8 @@ hr {
     // Configuração específica para Render
     const launchOptions = {
       headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--disable-extensions',
-        '--disable-plugins',
-        '--disable-images',
-        '--virtual-time-budget=5000',
-        '--run-all-compositor-stages-before-draw',
-        '--disable-background-timer-throttling',
-        '--disable-renderer-backgrounding',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-features=TranslateUI',
-        '--disable-ipc-flooding-protection',
-        '--memory-pressure-off'
-      ],
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+
       defaultViewport: { width: 1280, height: 720 },
       timeout: 60000
     };
