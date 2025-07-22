@@ -136,22 +136,6 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
   return "Erro ao gerar análise";
 }
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    service: 'microservico-analise'
-  });
-});
-
-// Endpoint para testar CORS
-app.get('/test-cors', (req, res) => {
-  res.status(200).json({ 
-    message: 'CORS está funcionando!',
-    origin: req.headers.origin
-  });
-});
 
 app.post('/analise', async (req, res) => {
   try {
@@ -583,8 +567,6 @@ app.use('*', (req, res) => {
     path: req.originalUrl,
     method: req.method,
     availableEndpoints: [
-      'GET /health',
-      'GET /test-cors',
       'POST /analise',
       'POST /analisepdf',
       'POST /comparison'
