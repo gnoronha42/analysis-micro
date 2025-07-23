@@ -5,7 +5,7 @@ const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
 const { processarComparacao } = require('./comparison');
 const { marked } = require('marked');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer'); // Agora usando o pacote completo
 const cors = require('cors');
 const app = express();
 
@@ -226,182 +226,47 @@ function protegerBlocosFixos(markdown) {
 }
 
 async function gerarPdfDoMarkdown(markdown, clientName, analysisType) {
-  const htmlContent = `
-    <html>
-      <head>
-        <style>
-            body {
-  font-family: 'Arial', sans-serif;
-  color: #333;
-  margin: 20px;
-  line-height: 1.6;
-}
-
-h1, h2, h3 {
-  color: #f57c00;
-  background: #fff3e0;
-  padding: 10px;
-  border-left: 6px solid #f57c00;
-  border-radius: 6px;
-  margin-top: 40px;
-}
-
-h2 { font-size: 22px; }
-h3 { font-size: 18px; }
-
-p {
-  margin: 10px 0;
-}
-
-ul, ol {
-  padding-left: 20px;
-  margin: 10px 0;
-}
-
-.avoid-break {
-  page-break-inside: avoid;
-  break-inside: avoid;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-  margin: 20px 0;
-}
-
-th, td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  vertical-align: top;
-}
-
-th {
-  background-color: #f57c00;
-  color: white;
-}
-
-code, pre {
-  background: #f5f5f5;
-  padding: 10px;
-  font-family: 'Courier New', monospace;
-  border-radius: 4px;
-  overflow-x: auto;
-}
-
-hr {
-  border: none;
-  border-top: 1px solid #eee;
-  margin: 30px 0;
-}
-
-.highlight-box {
-  background: #fff3e0;
-  padding: 16px;
-  border-left: 6px solid #f57c00;
-  border-radius: 6px;
-  margin: 20px 0;
-}
-
-.title-highlight {
-  font-weight: bold;
-  font-size: 20px;
-  color: #f57c00;
-  padding: 10px;
-  background: #ffe0b2;
-  border-left: 6px solid #f57c00;
-  border-radius: 6px;
-  margin: 30px 0 10px;
-}
-        </style>
-      </head>
-      <body>
-        ${marked(markdown)}
-      </body>
-    </html>
-  `;
-
-  let browser = null;
-  
+  let browser;
   try {
-    console.log('🚀 Iniciando geração de PDF...');
+    console.log('🚀 Iniciando navegador...');
     
-    // Configuração específica para Render
     const launchOptions = {
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome',
       headless: 'new',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--single-process',
-        '--no-zygote'
+        '--single-process'
       ],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, // Deixe o Puppeteer encontrar o caminho
       timeout: 30000
     };
-    
 
-    // Tenta encontrar o Chrome instalado pelo puppeteer
-    try {
-      const chromePath = puppeteer.executablePath();
-      console.log('✅ Chrome encontrado em:', chromePath);
-      launchOptions.executablePath = chromePath;
-    } catch (error) {
-      console.log('⚠️  Usando Chrome padrão do sistema:', error.message);
-    }
-
-    console.log('🔧 Iniciando Puppeteer...');
+    console.log('⚙️ Opções de lançamento:', launchOptions);
     browser = await puppeteer.launch(launchOptions);
-    
+
     const page = await browser.newPage();
-    
-    // Configura timeouts mais generosos
-    page.setDefaultTimeout(60000);
-    page.setDefaultNavigationTimeout(60000);
-    
-    console.log('📄 Carregando conteúdo HTML...');
-    await page.setContent(htmlContent, { 
-      waitUntil: 'domcontentloaded',
-      timeout: 60000 
+    await page.setContent(markdownToHtml(markdown), {
+      waitUntil: 'networkidle0',
+      timeout: 60000
     });
 
-    console.log('🖨️  Gerando PDF...');
-    const pdfBuffer = await page.pdf({
-      format: 'a4',
+    console.log('🖨️ Gerando PDF...');
+    const pdf = await page.pdf({
+      format: 'A4',
       printBackground: true,
-      margin: { top: '20px', bottom: '20px', left: '15px', right: '15px' },
-      timeout: 60000,
-      preferCSSPageSize: false
+      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
     });
 
-    console.log('✅ PDF gerado com sucesso, tamanho:', pdfBuffer.length, 'bytes');
-    return pdfBuffer;
+    console.log('✅ PDF gerado com sucesso! Tamanho:', pdf.length, 'bytes');
+    return pdf;
 
   } catch (error) {
-    console.error('❌ Erro detalhado ao gerar PDF:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    
-    // Retorna erro mais específico baseado no tipo de erro
-    if (error.message.includes('Protocol error')) {
-      throw new Error('Erro de protocolo do Puppeteer. Serviço pode estar sobrecarregado.');
-    } else if (error.message.includes('Navigation timeout')) {
-      throw new Error('Timeout na navegação. Conteúdo muito grande ou serviço lento.');
-    } else if (error.message.includes('Target closed')) {
-      throw new Error('Navegador foi fechado inesperadamente.');
-    } else {
-      throw new Error(`Falha na geração do PDF: ${error.message}`);
-    }
+    console.error('❌ Erro na geração do PDF:', error);
+    throw new Error(`Falha ao gerar PDF: ${error.message}`);
   } finally {
     if (browser) {
-      try {
-        console.log('🔒 Fechando navegador...');
-        await browser.close();
-      } catch (closeError) {
-        console.error('⚠️  Erro ao fechar browser:', closeError);
-      }
+      await browser.close().catch(e => console.error('⚠️ Erro ao fechar browser:', e));
     }
   }
 }
