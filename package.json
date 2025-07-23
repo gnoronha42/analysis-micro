@@ -3,18 +3,20 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "postinstall": "echo \"Skipping Chromium download as we'll use system Chrome\"" 
   },
   "dependencies": {
-    "@sparticuz/chromium-min": "^110.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "marked": "^16.1.1",
     "node-fetch": "^2.7.0",
-    "puppeteer-core": "^21.11.0"
+    "puppeteer": "^21.8.0" ,
+   
+    "@sparticuz/chromium-min": "^110.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
