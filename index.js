@@ -826,255 +826,128 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
 
 // Função HTML específica para itens concluídos
 function gerarHtmlChecklistConcluidos(markdown, clientName) {
+  // Adiciona uma página separada para o resumo executivo
+  // e evita quebra de página dentro do bloco do resumo
   const htmlContent = `
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>Checklist Concluído - ${clientName}</title>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-      
-      body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        line-height: 1.8;
-        color: #1f2937;
-        padding: 30px;
-        margin: 0;
-        background: #ffffff;
-        font-size: 14px;
-      }
+    <html>
+      <head>
+        <style>
+            body {
+  font-family: 'Arial', sans-serif;
+  color: #333;
+  margin: 20px;
+  line-height: 1.6;
+}
 
-      /* Cabeçalho principal - Verde para concluídos */
-      .header-checklist {
-        text-align: center;
-        margin-bottom: 40px;
-        padding: 30px;
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-        border-radius: 15px;
-        border: 3px solid #bbf7d0;
-        box-shadow: 0 8px 25px rgba(34, 197, 94, 0.15);
-      }
+h1, h2, h3 {
+  color: #f57c00;
+  background: #fff3e0;
+  padding: 10px;
+  border-left: 6px solid #f57c00;
+  border-radius: 6px;
+  margin-top: 40px;
+}
 
-      .header-checklist h1 {
-        color: #15803d;
-        font-size: 32px;
-        font-weight: 700;
-        margin: 0 0 10px 0;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
+h2 { font-size: 22px; }
+h3 { font-size: 18px; }
 
-      .header-checklist .client-info {
-        color: #166534;
-        font-size: 16px;
-        font-weight: 600;
-        margin-top: 15px;
-        line-height: 1.6;
-      }
+p {
+  margin: 10px 0;
+}
 
-      /* Títulos principais */
-      h1 {
-        color: #15803d;
-        font-size: 28px;
-        font-weight: 700;
-        margin: 30px 0 20px 0;
-        padding: 20px 0 15px 0;
-        border-bottom: 3px solid #bbf7d0;
-        background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        page-break-after: avoid;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
+ul, ol {
+  padding-left: 20px;
+  margin: 10px 0;
+}
 
-      h2 {
-        color: #ffffff;
-        font-size: 22px;
-        font-weight: 600;
-        margin: 25px 0 15px 0;
-        padding: 15px 25px;
-        background: linear-gradient(135deg, #15803d 0%, #166534 100%);
-        border-radius: 10px;
-        page-break-after: avoid;
-        box-shadow: 0 4px 8px rgba(21, 128, 61, 0.2);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
+.avoid-break {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
 
-      h3 {
-        color: #15803d;
-        font-size: 18px;
-        font-weight: 600;
-        margin: 20px 0 12px 0;
-        padding: 12px 20px;
-        background: #f0fdf4;
-        border-left: 4px solid #22c55e;
-        border-radius: 0 8px 8px 0;
-        page-break-after: avoid;
-        display: flex;
-        align-items: center;
-      }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 20px 0;
+}
 
-      h3:before {
-        content: '✅';
-        margin-right: 10px;
-        font-size: 20px;
-      }
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  vertical-align: top;
+}
 
-      /* Conteúdo dos itens concluídos */
-      p {
-        margin: 12px 0;
-        color: #374151;
-        line-height: 1.7;
-      }
+th {
+  background-color: #f57c00;
+  color: white;
+}
 
-      strong {
-        color: #15803d;
-        font-weight: 600;
-      }
+code, pre {
+  background: #f5f5f5;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  border-radius: 4px;
+  overflow-x: auto;
+}
 
-      /* Data/hora de conclusão - Destaque especial */
-      p:contains('Concluído em') {
-        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-        padding: 12px 20px;
-        border-radius: 8px;
-        border-left: 4px solid #22c55e;
-        font-weight: 600;
-        color: #166534;
-        margin: 15px 0;
-        box-shadow: 0 2px 4px rgba(34, 197, 94, 0.1);
-      }
+hr {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 30px 0;
+}
 
-      /* Separadores */
-      hr {
-        border: none;
-        height: 2px;
-        background: linear-gradient(135deg, #bbf7d0 0%, #dcfce7 100%);
-        margin: 25px 0;
-        border-radius: 2px;
-      }
+.highlight-box {
+  background: #fff3e0;
+  padding: 16px;
+  border-left: 6px solid #f57c00;
+  border-radius: 6px;
+  margin: 20px 0;
+}
 
-      /* Resumo executivo */
-      h2:contains('RESUMO EXECUTIVO') {
-        background: linear-gradient(135deg, #059669 0%, #047857 100%);
-        color: white;
-        text-align: center;
-        padding: 20px;
-        border-radius: 12px;
-        margin-top: 40px;
-      }
+.title-highlight {
+  font-weight: bold;
+  font-size: 20px;
+  color: #f57c00;
+  padding: 10px;
+  background: #ffe0b2;
+  border-left: 6px solid #f57c00;
+  border-radius: 6px;
+  margin: 30px 0 10px;
+}
 
-      /* Lista do resumo */
-      ul {
-        background: #f0fdf4;
-        padding: 20px 30px;
-        border-radius: 10px;
-        border-left: 4px solid #22c55e;
-        margin: 20px 0;
-      }
-
-      li {
-        margin: 8px 0;
-        color: #166534;
-        font-weight: 500;
-        list-style-type: none;
-        position: relative;
-        padding-left: 25px;
-      }
-
-      li:before {
-        content: '📊';
-        position: absolute;
-        left: 0;
-        top: 0;
-      }
-
-      /* Rodapé */
-      .footer-info {
-        margin-top: 40px;
-        padding: 20px;
-        background: linear-gradient(135deg, #f9fafb 0%, #f0fdf4 100%);
-        border-top: 3px solid #bbf7d0;
-        border-radius: 10px;
-        text-align: center;
-      }
-
-      .footer-info small {
-        font-size: 12px;
-        color: #166534;
-        font-weight: 500;
-      }
-
-      /* Badge de status */
-      .status-badge {
-        display: inline-block;
-        background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
-        color: white;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-left: 10px;
-      }
-
-      /* Estilos para impressão */
-      @media print {
-        body { 
-          margin: 0;
-          padding: 15px;
-          font-size: 12px;
-        }
-        
-        h1, h2, h3 {
-          page-break-after: avoid;
-        }
-        
-        /* Força cores para impressão */
-        * {
-          -webkit-print-color-adjust: exact !important;
-          color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="header-checklist">
-      <h1>✅ Relatório de Atividades Concluídas</h1>
-      <div class="client-info">
-        <strong>Cliente:</strong> ${clientName}<br>
-        <strong>Tipo:</strong> Checklist Operacional - Itens Finalizados
-      </div>
-    </div>
-    
-    ${marked(markdown)}
-    
-    <div class="footer-info">
-      <small>
-        Relatório gerado automaticamente • Somente itens concluídos • 
-        ${new Date().toLocaleDateString('pt-BR', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })}
-      </small>
-    </div>
-  </body>
-</html>
-`;
-
+.executive-summary-page {
+  page-break-before: always;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+        </style>
+      </head>
+      <body>
+        ${splitMarkdownWithExecutiveSummary(marked, markdown)}
+      </body>
+    </html>
+  `;
   return htmlContent;
+}
+
+// Função auxiliar para separar o resumo executivo em uma página nova
+function splitMarkdownWithExecutiveSummary(marked, markdown) {
+  // Divide o markdown em duas partes: antes e depois do resumo executivo
+  const resumoRegex = /(^|\n)(## +📊 RESUMO EXECUTIVO[\s\S]*)/i;
+  const match = markdown.match(resumoRegex);
+  if (!match) {
+    // Não encontrou o resumo, retorna tudo normalmente
+    return marked(markdown);
+  }
+  const beforeResumo = markdown.slice(0, match.index);
+  const resumo = match[2];
+  return `
+    ${marked(beforeResumo)}
+    <div class="executive-summary-page">
+      ${marked(resumo)}
+    </div>
+  `;
 }
 
 // Modificação na função ClientChecklist para incluir o botão de PDF de concluídos
