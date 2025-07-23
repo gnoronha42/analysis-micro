@@ -757,6 +757,548 @@ app.get('/test-browserless', async (req, res) => {
   }
 });
 
+
+// Função para filtrar apenas itens concluídos do checklist
+function filtrarItensCompletados(blocks) {
+  return blocks.map(block => ({
+    ...block,
+    items: block.items.filter(item => item.is_completed === true)
+  })).filter(block => block.items.length > 0); // Remove blocos sem itens concluídos
+}
+
+// Função para gerar markdown apenas com itens concluídos
+function generateCompletedChecklistMarkdown(blocks, clientName) {
+  const completedBlocks = filtrarItensCompletados(blocks);
+  
+  if (completedBlocks.length === 0) {
+    return `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n**Cliente:** ${clientName}\n\n*Nenhum item foi concluído ainda.*`;
+  }
+
+  let md = `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n`;
+  md += `**Cliente:** ${clientName}\n`;
+  md += `**Data do Relatório:** ${new Date().toLocaleDateString('pt-BR', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}\n\n`;
+
+  let totalConcluidos = 0;
+  
+  completedBlocks.forEach((block, i) => {
+    md += `## ${block.title}\n`;
+    md += `**Itens Concluídos:** ${block.items.length}\n\n`;
+    
+    block.items.forEach((item, idx) => {
+      totalConcluidos++;
+      md += `### ✓ ${item.title}\n`;
+      
+      if (item.description) {
+        md += `**Descrição:** ${item.description}\n\n`;
+      }
+      
+      if (item.completed_at) {
+        const dataFormatada = new Date(item.completed_at).toLocaleDateString('pt-BR', {
+          year: 'numeric',
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+        md += `**✅ Concluído em:** ${dataFormatada}\n\n`;
+      } else {
+        md += `**✅ Status:** Concluído\n\n`;
+      }
+      
+      md += `---\n\n`;
+    });
+  });
+
+  md += `## 📊 RESUMO EXECUTIVO\n\n`;
+  md += `- **Total de Itens Concluídos:** ${totalConcluidos}\n`;
+  md += `- **Blocos com Atividades Finalizadas:** ${completedBlocks.length}\n`;
+  md += `- **Taxa de Progresso:** Itens selecionados concluídos\n\n`;
+
+  return md;
+}
+
+// Função HTML específica para itens concluídos
+function gerarHtmlChecklistConcluidos(markdown, clientName) {
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Checklist Concluído - ${clientName}</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+      
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        line-height: 1.8;
+        color: #1f2937;
+        padding: 30px;
+        margin: 0;
+        background: #ffffff;
+        font-size: 14px;
+      }
+
+      /* Cabeçalho principal - Verde para concluídos */
+      .header-checklist {
+        text-align: center;
+        margin-bottom: 40px;
+        padding: 30px;
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-radius: 15px;
+        border: 3px solid #bbf7d0;
+        box-shadow: 0 8px 25px rgba(34, 197, 94, 0.15);
+      }
+
+      .header-checklist h1 {
+        color: #15803d;
+        font-size: 32px;
+        font-weight: 700;
+        margin: 0 0 10px 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .header-checklist .client-info {
+        color: #166534;
+        font-size: 16px;
+        font-weight: 600;
+        margin-top: 15px;
+        line-height: 1.6;
+      }
+
+      /* Títulos principais */
+      h1 {
+        color: #15803d;
+        font-size: 28px;
+        font-weight: 700;
+        margin: 30px 0 20px 0;
+        padding: 20px 0 15px 0;
+        border-bottom: 3px solid #bbf7d0;
+        background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        page-break-after: avoid;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      h2 {
+        color: #ffffff;
+        font-size: 22px;
+        font-weight: 600;
+        margin: 25px 0 15px 0;
+        padding: 15px 25px;
+        background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+        border-radius: 10px;
+        page-break-after: avoid;
+        box-shadow: 0 4px 8px rgba(21, 128, 61, 0.2);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      h3 {
+        color: #15803d;
+        font-size: 18px;
+        font-weight: 600;
+        margin: 20px 0 12px 0;
+        padding: 12px 20px;
+        background: #f0fdf4;
+        border-left: 4px solid #22c55e;
+        border-radius: 0 8px 8px 0;
+        page-break-after: avoid;
+        display: flex;
+        align-items: center;
+      }
+
+      h3:before {
+        content: '✅';
+        margin-right: 10px;
+        font-size: 20px;
+      }
+
+      /* Conteúdo dos itens concluídos */
+      p {
+        margin: 12px 0;
+        color: #374151;
+        line-height: 1.7;
+      }
+
+      strong {
+        color: #15803d;
+        font-weight: 600;
+      }
+
+      /* Data/hora de conclusão - Destaque especial */
+      p:contains('Concluído em') {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        padding: 12px 20px;
+        border-radius: 8px;
+        border-left: 4px solid #22c55e;
+        font-weight: 600;
+        color: #166534;
+        margin: 15px 0;
+        box-shadow: 0 2px 4px rgba(34, 197, 94, 0.1);
+      }
+
+      /* Separadores */
+      hr {
+        border: none;
+        height: 2px;
+        background: linear-gradient(135deg, #bbf7d0 0%, #dcfce7 100%);
+        margin: 25px 0;
+        border-radius: 2px;
+      }
+
+      /* Resumo executivo */
+      h2:contains('RESUMO EXECUTIVO') {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        color: white;
+        text-align: center;
+        padding: 20px;
+        border-radius: 12px;
+        margin-top: 40px;
+      }
+
+      /* Lista do resumo */
+      ul {
+        background: #f0fdf4;
+        padding: 20px 30px;
+        border-radius: 10px;
+        border-left: 4px solid #22c55e;
+        margin: 20px 0;
+      }
+
+      li {
+        margin: 8px 0;
+        color: #166534;
+        font-weight: 500;
+        list-style-type: none;
+        position: relative;
+        padding-left: 25px;
+      }
+
+      li:before {
+        content: '📊';
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+
+      /* Rodapé */
+      .footer-info {
+        margin-top: 40px;
+        padding: 20px;
+        background: linear-gradient(135deg, #f9fafb 0%, #f0fdf4 100%);
+        border-top: 3px solid #bbf7d0;
+        border-radius: 10px;
+        text-align: center;
+      }
+
+      .footer-info small {
+        font-size: 12px;
+        color: #166534;
+        font-weight: 500;
+      }
+
+      /* Badge de status */
+      .status-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-left: 10px;
+      }
+
+      /* Estilos para impressão */
+      @media print {
+        body { 
+          margin: 0;
+          padding: 15px;
+          font-size: 12px;
+        }
+        
+        h1, h2, h3 {
+          page-break-after: avoid;
+        }
+        
+        /* Força cores para impressão */
+        * {
+          -webkit-print-color-adjust: exact !important;
+          color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header-checklist">
+      <h1>✅ Relatório de Atividades Concluídas</h1>
+      <div class="client-info">
+        <strong>Cliente:</strong> ${clientName}<br>
+        <strong>Tipo:</strong> Checklist Operacional - Itens Finalizados
+      </div>
+    </div>
+    
+    ${marked(markdown)}
+    
+    <div class="footer-info">
+      <small>
+        Relatório gerado automaticamente • Somente itens concluídos • 
+        ${new Date().toLocaleDateString('pt-BR', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}
+      </small>
+    </div>
+  </body>
+</html>
+`;
+
+  return htmlContent;
+}
+
+// Modificação na função ClientChecklist para incluir o botão de PDF de concluídos
+const handleGenerateCompletedPDF = async () => {
+  try {
+    const completedBlocks = filtrarItensCompletados(blocks);
+    
+    if (completedBlocks.length === 0) {
+      toast({ 
+        title: "Nenhum item concluído", 
+        description: "Não há itens marcados como concluídos para gerar o PDF.", 
+        variant: "default" 
+      });
+      return;
+    }
+
+    const markdown = generateCompletedChecklistMarkdown(blocks, clientName || "Cliente");
+    
+    const response = await fetch("http://localhost:3001/checklist-completed-pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        blocks: completedBlocks, 
+        clientName: clientName || "Cliente",
+        markdown: markdown
+      }),
+    });
+    
+    if (!response.ok) throw new Error("Erro ao gerar PDF dos itens concluídos");
+    
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `checklist_concluidos_${clientName || "cliente"}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast({ 
+      title: "PDF gerado!", 
+      description: `PDF com ${completedBlocks.reduce((total, block) => total + block.items.length, 0)} itens concluídos baixado.`, 
+      variant: "default" 
+    });
+  } catch (error) {
+    toast({ 
+      title: "Erro ao gerar PDF", 
+      description: "Não foi possível gerar o PDF dos itens concluídos.", 
+      variant: "destructive" 
+    });
+  }
+};
+
+// Função para filtrar blocos com pelo menos um item concluído do checklist
+function filtrarBlocosComAlgumConcluido(blocks) {
+  return blocks
+    .map(block => ({
+      ...block,
+      items: block.items.filter(item => item.is_completed === true)
+    }))
+    .filter(block => block.items.length > 0);
+}
+
+// Função para gerar markdown apenas com blocos com pelo menos um item concluído
+function generateCompletedChecklistMarkdown(blocks, clientName) {
+  const completedBlocks = filtrarBlocosComAlgumConcluido(blocks);
+  
+  if (completedBlocks.length === 0) {
+    return `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n**Cliente:** ${clientName}\n\n*Nenhum item foi concluído ainda.*`;
+  }
+
+  let md = `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n`;
+  md += `**Cliente:** ${clientName}\n`;
+  md += `**Data do Relatório:** ${new Date().toLocaleDateString('pt-BR', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}\n\n`;
+
+  let totalConcluidos = 0;
+  
+  completedBlocks.forEach((block, i) => {
+    md += `## ${block.title}\n`;
+    md += `**Itens Concluídos:** ${block.items.length}\n\n`;
+    
+    block.items.forEach((item, idx) => {
+      totalConcluidos++;
+      md += `### ✓ ${item.title}\n`;
+      
+      if (item.description) {
+        md += `**Descrição:** ${item.description}\n\n`;
+      }
+      
+      if (item.completed_at) {
+        const dataFormatada = new Date(item.completed_at).toLocaleDateString('pt-BR', {
+          year: 'numeric',
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+        md += `**✅ Concluído em:** ${dataFormatada}\n\n`;
+      } else {
+        md += `**✅ Status:** Concluído\n\n`;
+      }
+      
+      md += `---\n\n`;
+    });
+  });
+
+  md += `## 📊 RESUMO EXECUTIVO\n\n`;
+  md += `- **Total de Itens Concluídos:** ${totalConcluidos}\n`;
+  md += `- **Blocos com Atividades Finalizadas:** ${completedBlocks.length}\n`;
+  md += `- **Taxa de Progresso:** Blocos com pelo menos um item concluído\n\n`;
+
+  return md;
+}
+
+// Nova rota no servidor Express para PDF de itens concluídos
+app.post('/checklist-completed-pdf', async (req, res) => {
+  console.log('📥 Recebida requisição para PDF de itens concluídos');
+  
+  try {
+    const { blocks, clientName, markdown } = req.body;
+
+    if (!blocks || !Array.isArray(blocks)) {
+      return res.status(400).json({ 
+        error: "Blocos do checklist são obrigatórios",
+        received: typeof blocks
+      });
+    }
+
+    if (!clientName || typeof clientName !== 'string') {
+      return res.status(400).json({ 
+        error: "Nome do cliente é obrigatório",
+        received: typeof clientName
+      });
+    }
+
+    // Filtrar apenas blocos com pelo menos um item concluído
+    const completedBlocks = filtrarBlocosComAlgumConcluido(blocks);
+
+    if (completedBlocks.length === 0) {
+      return res.status(400).json({
+        error: "Nenhum item concluído para gerar o PDF."
+      });
+    }
+
+    console.log('✅ Processando PDF de itens concluídos...');
+    console.log('👤 Cliente:', clientName);
+    console.log('📊 Blocos com itens concluídos:', completedBlocks.length);
+
+    // Gerar markdown apenas com os blocos e itens concluídos
+    const finalMarkdown = generateCompletedChecklistMarkdown(completedBlocks, clientName);
+    
+    // Gerar HTML específico para itens concluídos
+    const htmlContent = gerarHtmlChecklistConcluidos(finalMarkdown, clientName);
+
+    // Configurar Browserless
+    const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN;
+    const BROWSERLESS_URL = `https://production-sfo.browserless.io/pdf?token=${BROWSERLESS_TOKEN}`;
+
+    const options = {
+      displayHeaderFooter: false,
+      printBackground: true,
+      format: 'A4',
+      margin: {
+        top: '20px',
+        right: '20px',
+        bottom: '20px',
+        left: '20px'
+      }
+    };
+
+    console.log('🖨️ Gerando PDF...');
+    const startTime = Date.now();
+
+    const response = await fetch(BROWSERLESS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache'
+      },
+      body: JSON.stringify({
+        html: htmlContent,
+        options: options
+      }),
+      timeout: 35000
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Erro do Browserless:', response.status, errorText);
+      throw new Error(`Browserless error: ${response.status}`);
+    }
+
+    const pdfBuffer = await response.buffer();
+    
+    console.log(`✅ PDF de itens concluídos gerado em ${((Date.now() - startTime)/1000).toFixed(2)}s`);
+    console.log(`📄 Tamanho: ${(pdfBuffer.length / 1024).toFixed(2)} KB`);
+
+    const filename = `checklist_concluidos_${clientName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    return res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error('❌ Erro na geração de PDF de itens concluídos:', error);
+    
+    res.status(500).json({
+      error: 'Erro ao gerar PDF de itens concluídos',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Middleware global de tratamento de erros
 app.use((err, req, res, next) => {
   console.error('🚨 Erro não capturado:', {
