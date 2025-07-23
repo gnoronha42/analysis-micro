@@ -1078,56 +1078,7 @@ function gerarHtmlChecklistConcluidos(markdown, clientName) {
 }
 
 // Modificação na função ClientChecklist para incluir o botão de PDF de concluídos
-const handleGenerateCompletedPDF = async () => {
-  try {
-    const completedBlocks = filtrarItensCompletados(blocks);
-    
-    if (completedBlocks.length === 0) {
-      toast({ 
-        title: "Nenhum item concluído", 
-        description: "Não há itens marcados como concluídos para gerar o PDF.", 
-        variant: "default" 
-      });
-      return;
-    }
 
-    const markdown = generateCompletedChecklistMarkdown(blocks, clientName || "Cliente");
-    
-    const response = await fetch("http://localhost:3001/checklist-completed-pdf", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        blocks: completedBlocks, 
-        clientName: clientName || "Cliente",
-        markdown: markdown
-      }),
-    });
-    
-    if (!response.ok) throw new Error("Erro ao gerar PDF dos itens concluídos");
-    
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `checklist_concluidos_${clientName || "cliente"}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    toast({ 
-      title: "PDF gerado!", 
-      description: `PDF com ${completedBlocks.reduce((total, block) => total + block.items.length, 0)} itens concluídos baixado.`, 
-      variant: "default" 
-    });
-  } catch (error) {
-    toast({ 
-      title: "Erro ao gerar PDF", 
-      description: "Não foi possível gerar o PDF dos itens concluídos.", 
-      variant: "destructive" 
-    });
-  }
-};
 
 // Função para filtrar blocos com pelo menos um item concluído do checklist
 function filtrarBlocosComAlgumConcluido(blocks) {
