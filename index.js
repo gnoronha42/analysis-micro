@@ -5,8 +5,8 @@ const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
 const { processarComparacao } = require('./comparison');
 const { marked } = require('marked');
-const puppeteer = require('puppeteer'); // Agora usando o pacote completo
-const chromium = require('@sparticuz/chromium-min');
+const puppeteer = require('puppeteer');
+const chromium = require('chrome-aws-lambda');
 
 
 const cors = require('cors');
@@ -228,10 +228,11 @@ function protegerBlocosFixos(markdown) {
   return markdown;
 }
 
+
 async function gerarPdfDoMarkdown(markdown, clientName, analysisType) {
   let browser;
   try {
-    console.log('🚀 Configurando navegador...');
+    console.log('🚀 Iniciando navegador...');
     
     const launchOptions = {
       args: [
@@ -239,49 +240,37 @@ async function gerarPdfDoMarkdown(markdown, clientName, analysisType) {
         '--disable-dev-shm-usage',
         '--single-process'
       ],
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      executablePath: await chromium.executablePath || 
+      '/usr/bin/google-chrome-stable' || 
+      '/usr/bin/chromium-browser' || 
+      '/usr/bin/chromium',
+      headless: 'new',
       defaultViewport: { width: 1280, height: 720 },
       ignoreHTTPSErrors: true,
-      timeout: 60000
+      timeout: 30000
     };
 
-    console.log('⚙️ Opções simplificadas:', {
-      executablePath: launchOptions.executablePath,
-      headless: launchOptions.headless,
-      timeout: launchOptions.timeout
-    });
-
+    console.log('⚙️ Tentando executável:', launchOptions.executablePath);
     browser = await puppeteer.launch(launchOptions);
-    console.log('🌐 Navegador iniciado com sucesso');
-
+    
     const page = await browser.newPage();
     await page.setContent(markdownToHtml(markdown), {
       waitUntil: 'domcontentloaded',
-      timeout: 30000
+      timeout: 15000
     });
 
-    console.log('📄 Gerando PDF...');
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
-      timeout: 30000
+      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
     });
 
-    console.log('✅ PDF gerado com sucesso');
     return pdf;
-
   } catch (error) {
-    console.error('❌ Erro detalhado:', {
-      message: error.message,
-      stack: error.stack
-    });
+    console.error('❌ Erro crítico:', error);
     throw new Error(`Falha na geração: ${error.message}`);
   } finally {
-    if (browser) {
-      await browser.close().catch(e => console.error('⚠️ Erro ao fechar:', e));
-    }
+    if (browser) await browser.close().catch(console.error);
   }
 }
 

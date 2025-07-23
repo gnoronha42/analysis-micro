@@ -15,7 +15,6 @@
     "marked": "^16.1.1",
     "node-fetch": "^2.7.0",
     "puppeteer": "^21.8.0" ,
-   
     "@sparticuz/chromium-min": "^110.0.0"
   },
   "engines": {
