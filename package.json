@@ -6,16 +6,16 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "postinstall": "echo \"Skipping Chromium download as we'll use system Chrome\"" 
+    "postinstall": "echo \"Skipping Chromium download as we'll use system Chrome\""
   },
   "dependencies": {
+    "chrome-aws-lambda": "^10.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "marked": "^16.1.1",
     "node-fetch": "^2.7.0",
-    "puppeteer": "^21.8.0" ,
-    "chrome-aws-lambda": "^110.0.0"
+    "puppeteer": "^24.15.0"
   },
   "engines": {
     "node": ">=18.0.0"
