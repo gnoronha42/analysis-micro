@@ -6,19 +6,15 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "postinstall": "puppeteer browsers install chrome"
+    "postinstall": "echo \"Skipping Chromium download as we'll use system Chrome\"" 
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "marked": "^16.1.1",
     "node-fetch": "^2.7.0",
-    "puppeteer-core": "^24.14.0"
+    "puppeteer": "^21.8.0"  
   },
   "engines": {
     "node": ">=18.0.0"
