@@ -6,6 +6,8 @@ const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS }
 const { processarComparacao } = require('./comparison');
 const { marked } = require('marked');
 const puppeteer = require('puppeteer'); // Agora usando o pacote completo
+const chromium = require('@sparticuz/chromium');
+
 const cors = require('cors');
 const app = express();
 
@@ -231,18 +233,14 @@ async function gerarPdfDoMarkdown(markdown, clientName, analysisType) {
     console.log('🚀 Iniciando navegador...');
     
     const launchOptions = {
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--single-process'
-      ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, // Deixe o Puppeteer encontrar o caminho
-      timeout: 30000
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+      defaultViewport: chromium.defaultViewport,
+      ignoreHTTPSErrors: true,
     };
 
-    console.log('⚙️ Opções de lançamento:', launchOptions);
+    console.log('⚙️ Configuração do navegador:', launchOptions);
     browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
@@ -251,26 +249,22 @@ async function gerarPdfDoMarkdown(markdown, clientName, analysisType) {
       timeout: 60000
     });
 
-    console.log('🖨️ Gerando PDF...');
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
       margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
     });
 
-    console.log('✅ PDF gerado com sucesso! Tamanho:', pdf.length, 'bytes');
+    console.log('✅ PDF gerado com sucesso!');
     return pdf;
 
   } catch (error) {
     console.error('❌ Erro na geração do PDF:', error);
     throw new Error(`Falha ao gerar PDF: ${error.message}`);
   } finally {
-    if (browser) {
-      await browser.close().catch(e => console.error('⚠️ Erro ao fechar browser:', e));
-    }
+    if (browser) await browser.close().catch(e => console.error('⚠️ Erro ao fechar browser:', e));
   }
 }
-
 app.post('/analisepdf', async (req, res) => {
   console.log('📥 Recebida requisição para geração de PDF');
   console.log('🌐 Origin:', req.headers.origin);

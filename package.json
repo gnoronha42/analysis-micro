@@ -6,7 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "postinstall": "echo \"Skipping Chromium download as we'll use system Chrome\"" 
+   
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -14,7 +14,8 @@
     "express": "^5.1.0",
     "marked": "^16.1.1",
     "node-fetch": "^2.7.0",
-    "puppeteer": "^21.8.0"  
+    "puppeteer": "^21.8.0" ,
+    "@sparticuz/chromium": "^110.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
