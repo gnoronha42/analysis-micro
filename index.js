@@ -231,64 +231,290 @@ async function gerarPdfDoMarkdown(markdown, clientName, analysisType) {
     console.log('📝 Tamanho do Markdown:', markdown.length, 'caracteres');
 
     // 1. Converter markdown para HTML com estilos otimizados para PDF
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body {
-              font-family: 'Arial', sans-serif;
-              line-height: 1.6;
-              color: #333;
-              padding: 20px;
-              margin: 0;
-            }
-            h1, h2, h3 {
-              color: #2c3e50;
-              margin-top: 24px;
-              page-break-after: avoid;
-            }
-            .avoid-break {
-              page-break-inside: avoid;
-              break-inside: avoid;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 15px 0;
-              page-break-inside: avoid;
-            }
-            th, td {
-              border: 1px solid #ddd;
-              padding: 8px;
-              text-align: left;
-            }
-            th {
-              background-color: #f4f4f4;
-            }
-            p {
-              margin-bottom: 12px;
-            }
-            ul, ol {
-              margin-bottom: 12px;
-            }
-            @media print {
-              body { 
-                margin: 0;
-                padding: 15px;
-              }
-              .avoid-break {
-                page-break-inside: avoid;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          ${marked(markdown)}
-        </body>
-      </html>
-    `;
+   // Substitua o trecho da função gerarPdfDoMarkdown - seção do htmlContent:
+
+const htmlContent = `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+      
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        line-height: 1.7;
+        color: #2d3748;
+        padding: 30px;
+        margin: 0;
+        background: #ffffff;
+        font-size: 14px;
+      }
+
+      /* Títulos com gradiente laranja */
+      h1 {
+        color: #ea580c;
+        font-size: 28px;
+        font-weight: 700;
+        margin: 30px 0 20px 0;
+        padding: 20px 0 15px 0;
+        border-bottom: 3px solid #fed7aa;
+        background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        page-break-after: avoid;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      h2 {
+        color: #c2410c;
+        font-size: 22px;
+        font-weight: 600;
+        margin: 25px 0 15px 0;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #fed7aa 0%, #ffedd5 100%);
+        border-left: 5px solid #ea580c;
+        border-radius: 0 8px 8px 0;
+        page-break-after: avoid;
+        box-shadow: 0 2px 4px rgba(234, 88, 12, 0.1);
+      }
+
+      h3 {
+        color: #9a3412;
+        font-size: 18px;
+        font-weight: 600;
+        margin: 20px 0 12px 0;
+        padding: 8px 15px;
+        background: #fff7ed;
+        border-left: 3px solid #f97316;
+        border-radius: 0 6px 6px 0;
+        page-break-after: avoid;
+      }
+
+      h4 {
+        color: #7c2d12;
+        font-size: 16px;
+        font-weight: 600;
+        margin: 18px 0 10px 0;
+        padding: 6px 0;
+        border-bottom: 1px solid #fed7aa;
+        page-break-after: avoid;
+      }
+
+      /* Parágrafos e texto */
+      p {
+        margin-bottom: 14px;
+        text-align: justify;
+        color: #374151;
+        line-height: 1.8;
+      }
+
+      strong {
+        color: #c2410c;
+        font-weight: 600;
+      }
+
+      /* Listas */
+      ul, ol {
+        margin: 15px 0;
+        padding-left: 25px;
+      }
+
+      li {
+        margin-bottom: 8px;
+        color: #4b5563;
+        line-height: 1.7;
+      }
+
+      li strong {
+        color: #ea580c;
+      }
+
+      /* Tabelas modernas */
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin: 20px 0;
+        background: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(234, 88, 12, 0.1);
+        page-break-inside: avoid;
+      }
+
+      thead {
+        background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+      }
+
+      th {
+        background: transparent;
+        color: #ffffff;
+        font-weight: 600;
+        padding: 16px 20px;
+        text-align: left;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: none;
+      }
+
+      th:first-child {
+        border-top-left-radius: 12px;
+      }
+
+      th:last-child {
+        border-top-right-radius: 12px;
+      }
+
+      td {
+        padding: 14px 20px;
+        border-bottom: 1px solid #fed7aa;
+        color: #374151;
+        font-size: 13px;
+        vertical-align: top;
+      }
+
+      tbody tr:nth-child(even) {
+        background: #fff7ed;
+      }
+
+      tbody tr:hover {
+        background: #ffedd5;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      tbody tr:last-child td:first-child {
+        border-bottom-left-radius: 12px;
+      }
+
+      tbody tr:last-child td:last-child {
+        border-bottom-right-radius: 12px;
+      }
+
+      /* Valores importantes em destaque */
+      .valor-destaque {
+        background: linear-gradient(135deg, #fed7aa 0%, #ffedd5 100%);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        color: #c2410c;
+        display: inline-block;
+        margin: 4px;
+      }
+
+      /* Seções especiais */
+      .avoid-break {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        background: #fff7ed;
+        padding: 20px;
+        border-radius: 12px;
+        border: 2px solid #fed7aa;
+        margin: 20px 0;
+        box-shadow: 0 2px 8px rgba(234, 88, 12, 0.08);
+      }
+
+      .avoid-break h2 {
+        background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+        color: #ffffff;
+        margin: -20px -20px 15px -20px;
+        border-radius: 10px 10px 0 0;
+        border-left: none;
+      }
+
+      /* Citações e observações */
+      blockquote {
+        border-left: 4px solid #f97316;
+        padding: 15px 20px;
+        margin: 20px 0;
+        background: #fff7ed;
+        border-radius: 0 8px 8px 0;
+        font-style: italic;
+        color: #7c2d12;
+      }
+
+      /* Códigos e dados técnicos */
+      code {
+        background: #ffedd5;
+        color: #9a3412;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+      }
+
+      /* Separadores */
+      hr {
+        border: none;
+        height: 2px;
+        background: linear-gradient(135deg, #fed7aa 0%, #ffedd5 100%);
+        margin: 30px 0;
+        border-radius: 2px;
+      }
+
+      /* Estilos para impressão */
+      @media print {
+        body { 
+          margin: 0;
+          padding: 20px;
+          font-size: 12px;
+        }
+        
+        .avoid-break {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        
+        h1, h2, h3 {
+          page-break-after: avoid;
+        }
+        
+        table {
+          page-break-inside: avoid;
+        }
+        
+        /* Força cores para impressão */
+        * {
+          -webkit-print-color-adjust: exact !important;
+          color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+
+      /* Cabeçalho da primeira página */
+      .header-logo {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+        border-radius: 12px;
+        border: 2px solid #fed7aa;
+      }
+
+      /* Rodapé informativo */
+      .footer-info {
+        margin-top: 30px;
+        padding: 15px;
+        background: #f8fafc;
+        border-top: 2px solid #fed7aa;
+        border-radius: 8px;
+        font-size: 12px;
+        color: #6b7280;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    ${marked(markdown)}
+  </body>
+</html>
+`;
 
     // 2. Configurar o token do Browserless
     const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN
