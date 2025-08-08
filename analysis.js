@@ -767,31 +767,40 @@ Com base na análise completa, o cenário [conservador/realista/agressivo] é o 
 NÃO EXISTE REMARKETING NA SHOPEE, A ÚNICA FORMA DE FAZER ISSO É ATRAVÉS DA TRANSMISSÃO VIA CHAT.
 NÃO EXISTE SEGMENTAÇÃO DE ANÚNCIOS POR IDADE OU GÊNERO OU QUALQUER OUTRA FORMA DE SEGMENTAÇÃO.
 
-🧮 CÁLCULO OBRIGATÓRIO DO CPA
+🧮 CÁLCULO OBRIGATÓRIO DO CPA - CRÍTICO
 
-O CPA (Custo por Aquisição) DEVE ser calculado usando a fórmula:
-CPA = Investimento em Ads ÷ Pedidos Pagos
+O CPA (Custo por Aquisição) é uma métrica FUNDAMENTAL e DEVE ser calculado usando a fórmula:
+**CPA = Investimento em Ads ÷ Pedidos Pagos**
 
-Exemplo:
+Exemplo prático:
 - Se Investimento em Ads = R$625,20 e Pedidos Pagos = 32
 - Então CPA = R$625,20 ÷ 32 = R$19,54
 
-⚠️ REGRAS OBRIGATÓRIAS PARA CPA:
-1. NUNCA deixar como "Dado não informado" se houver dados de Investimento e Pedidos
-2. Sempre calcular mesmo que o valor pareça alto ou baixo
-3. Usar duas casas decimais
-4. Usar vírgula como separador decimal
-5. Incluir o prefixo "R$"
+⚠️ REGRAS OBRIGATÓRIAS PARA CPA - NÃO PODE SER IGNORADO:
+1. **SEMPRE** calcular o CPA quando houver dados de Investimento e Pedidos
+2. **NUNCA** deixar como "Dado não informado" se os dados existirem
+3. Usar exatamente duas casas decimais (ex: R$19,54)
+4. Usar vírgula como separador decimal (não ponto)
+5. Incluir sempre o prefixo "R$"
+6. Calcular mesmo que o valor pareça muito alto ou baixo
 
-📍 LOCAIS ONDE O CPA DEVE APARECER:
-1. Na tabela inicial de indicadores
-2. No resumo técnico (se houver)
-3. Em qualquer menção a CPA no texto
+📍 LOCAIS OBRIGATÓRIOS ONDE O CPA DEVE APARECER:
+1. **Na tabela inicial de indicadores** (linha "CPA")
+2. **Em qualquer seção que mencione CPA**
+3. **No resumo técnico** (se existir)
+4. **Nas recomendações estratégicas** quando relevante
 
-🚫 PROIBIDO:
+🔥 INSTRUÇÕES ESPECIAIS PARA ANÁLISE DE CONTA:
+- Se você encontrar "Investimento em Ads: R$X" e "Pedidos Pagos: Y", OBRIGATORIAMENTE calcule CPA = X ÷ Y
+- Se você encontrar "Investimento: R$X" e "Pedidos: Y", OBRIGATORIAMENTE calcule CPA = X ÷ Y
+- Substitua qualquer "CPA: Dado não informado" pelo valor calculado
+- O CPA é essencial para avaliar a eficiência dos anúncios
+
+🚫 ABSOLUTAMENTE PROIBIDO:
 - Deixar CPA como "Dado não informado" quando há dados para cálculo
-- Usar CPA de exemplo ou estimado
-- Omitir o cálculo do CPA 
+- Usar valores de exemplo ou estimados para CPA
+- Omitir o cálculo do CPA
+- Usar ponto como separador decimal (usar vírgula) 
 
 ⚠️ NUNCA FAZER:
 ❌ Não simplificar  

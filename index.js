@@ -44,21 +44,82 @@ app.use((req, res, next) => {
 });
 
 function calcularCPA(markdown) {
-  const investimentoMatch = markdown.match(/(?:Investimento em Ads|Investimento total em Ads)\s*[:|]\s*R\$\s*([\d.,]+)/i);
-  const pedidosMatch = markdown.match(/(?:Pedidos Pagos(?:\s*Mês)?|Pedidos via Ads)\s*[:|]\s*(\d+)/i);
+  console.log('🧮 Iniciando cálculo do CPA...');
+  
+  // Regex mais abrangente para capturar investimento
+  const investimentoMatch = markdown.match(/(?:Investimento\s+(?:em\s+)?Ads?|Investimento\s+total\s+em\s+Ads?)\s*[:|]\s*R\$\s*([\d.,]+)/i);
+  
+  // Regex mais abrangente para capturar pedidos
+  const pedidosMatch = markdown.match(/(?:Pedidos\s+Pagos(?:\s+Mês)?|Pedidos\s+via\s+Ads?|Pedidos\s+Pagos\s+Mês)\s*[:|]\s*(\d+)/i);
+
+  console.log('📊 Investimento encontrado:', investimentoMatch ? investimentoMatch[1] : 'Não encontrado');
+  console.log('📦 Pedidos encontrados:', pedidosMatch ? pedidosMatch[1] : 'Não encontrado');
 
   if (investimentoMatch && pedidosMatch) {
+    // Limpar e converter o investimento (remove pontos de milhares, converte vírgula para ponto)
     const investimento = parseFloat(investimentoMatch[1].replace(/\./g, '').replace(',', '.'));
     const pedidos = parseInt(pedidosMatch[1]);
 
-    if (pedidos > 0) {
+    console.log('💰 Investimento processado:', investimento);
+    console.log('📦 Pedidos processados:', pedidos);
+
+    if (pedidos > 0 && !isNaN(investimento)) {
       const cpa = (investimento / pedidos).toFixed(2);
-      return markdown.replace(
+      const cpaFormatado = `R$${cpa.replace('.', ',')}`;
+      console.log('🎯 CPA calculado:', cpaFormatado);
+      
+      let markdownAtualizado = markdown;
+      
+      // Primeira tentativa: substituir CPA existente
+      markdownAtualizado = markdownAtualizado.replace(
         /(CPA\s*(?:Médio|via Ads|geral)?\s*[:|])\s*(?:Dado não informado|R\$\s*[\d.,]+)/gi,
-        `$1 R$${cpa.replace('.', ',')}`
+        `$1 ${cpaFormatado}`
       );
+      
+      // Segunda tentativa: adicionar CPA na tabela se não existir
+      if (!markdownAtualizado.includes('CPA') || markdownAtualizado.includes('Dado não informado')) {
+        // Procurar pela tabela de indicadores e adicionar CPA
+        markdownAtualizado = markdownAtualizado.replace(
+          /(\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$[\d.,]+\s*\|)/i,
+          `$1\n| CPA | ${cpaFormatado} |`
+        );
+        
+        // Se ainda não encontrou, tentar outra posição na tabela
+        if (!markdownAtualizado.includes(`CPA | ${cpaFormatado}`)) {
+          markdownAtualizado = markdownAtualizado.replace(
+            /(\|\s*ROAS\s*\|\s*[\d.,]+\s*\|)/i,
+            `$1\n| CPA | ${cpaFormatado} |`
+          );
+        }
+      }
+      
+      console.log('✅ CPA atualizado no markdown');
+      return markdownAtualizado;
+    } else {
+      console.log('⚠️ Divisão por zero ou valores inválidos detectados');
+    }
+  } else {
+    console.log('❌ Não foi possível encontrar investimento e/ou pedidos no markdown');
+    
+    // Tentar encontrar na tabela de forma diferente
+    const tabelaMatch = markdown.match(/\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$\s*([\d.,]+)\s*\|[\s\S]*?\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
+    if (tabelaMatch) {
+      const investimento = parseFloat(tabelaMatch[1].replace(/\./g, '').replace(',', '.'));
+      const pedidos = parseInt(tabelaMatch[2]);
+      
+      if (pedidos > 0 && !isNaN(investimento)) {
+        const cpa = (investimento / pedidos).toFixed(2);
+        const cpaFormatado = `R$${cpa.replace('.', ',')}`;
+        console.log('🎯 CPA calculado da tabela:', cpaFormatado);
+        
+        return markdown.replace(
+          /(\|\s*CPA\s*\|\s*)(?:Dado não informado|R\$\s*[\d.,]+)(\s*\|)/i,
+          `$1${cpaFormatado}$2`
+        );
+      }
     }
   }
+  
   return markdown;
 }
 
@@ -816,10 +877,6 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
     });
   });
 
-  md += `## 📊 RESUMO EXECUTIVO\n\n`;
-  md += `- **Total de Itens Concluídos:** ${totalConcluidos}\n`;
-  md += `- **Blocos com Atividades Finalizadas:** ${completedBlocks.length}\n`;
-  md += `- **Taxa de Progresso:** Itens selecionados concluídos\n\n`;
 
   return md;
 }
@@ -989,10 +1046,18 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
     
     block.items.forEach((item, idx) => {
       totalConcluidos++;
-      md += `### ✓ ${item.title}\n`;
+      const executionText = item.execution_count && item.execution_count > 1 
+        ? ` (${item.execution_count}x)` 
+        : '';
+      
+      md += `### ✓ ${item.title}${executionText}\n`;
       
       if (item.description) {
         md += `**Descrição:** ${item.description}\n\n`;
+      }
+      
+      if (item.last_analyst) {
+        md += `**Último Analista:** ${item.last_analyst}\n\n`;
       }
       
       if (item.completed_at) {
@@ -1004,9 +1069,27 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
           minute: '2-digit',
           second: '2-digit'
         });
-        md += `**✅ Concluído em:** ${dataFormatada}\n\n`;
+        md += `**✅ Última Execução:** ${dataFormatada}\n\n`;
       } else {
         md += `**✅ Status:** Concluído\n\n`;
+      }
+      
+      // Adicionar histórico se houver múltiplas execuções
+      if (item.execution_history && item.execution_history.length > 1) {
+        md += `**📊 Histórico de Execuções:**\n`;
+        item.execution_history.forEach((hist, histIdx) => {
+          const histDataFormatada = hist.completed_at 
+            ? new Date(hist.completed_at).toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
+            : 'Data não informada';
+          md += `- ${histIdx + 1}ª execução: ${hist.analyst_name || 'Analista não informado'} em ${histDataFormatada}\n`;
+        });
+        md += `\n`;
       }
       
       md += `---\n\n`;
