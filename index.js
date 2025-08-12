@@ -13,6 +13,7 @@ const app = express();
 const corsOptions = {
   origin: [
     'https://shoppe-ai-9px3.vercel.app',
+    'https://www.selleria.com.br',
     'http://localhost:3000',
     'http://localhost:3001',
     'https://localhost:3000',
