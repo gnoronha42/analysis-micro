@@ -52,50 +52,49 @@ function calcularCPA(markdown) {
   let investimento = null;
   let pedidos = null;
   
-  // Estratégia 1: Buscar na tabela de indicadores (mais específica)
-  const tabelaMatch = markdown.match(/\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$\s*([\d.,]+)\s*\|[\s\S]*?\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
-  if (tabelaMatch) {
-    investimento = parseFloat(tabelaMatch[1].replace(/\./g, '').replace(',', '.'));
-    pedidos = parseInt(tabelaMatch[2]);
-    console.log('📊 Estratégia 1 - Dados encontrados na tabela:', { investimento, pedidos });
+  // Estratégia 1: Buscar investimento e pedidos separadamente (mais robusto)
+  const investimentoMatch = markdown.match(/\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$\s*([\d.,]+)\s*\|/i);
+  if (investimentoMatch) {
+    investimento = parseFloat(investimentoMatch[1].replace(/\./g, '').replace(',', '.'));
+    console.log('📊 Estratégia 1 - Investimento encontrado:', investimento);
   }
   
-  // Estratégia 1.1: Buscar na tabela com formato específico da naty_store
-  if (!investimento || !pedidos) {
-    const tabelaNatyMatch = markdown.match(/\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$\s*([\d.,]+)\s*\|[\s\S]*?\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
-    if (tabelaNatyMatch) {
-      investimento = parseFloat(tabelaNatyMatch[1].replace(/\./g, '').replace(',', '.'));
-      pedidos = parseInt(tabelaNatyMatch[2]);
-      console.log('📊 Estratégia 1.1 - Dados encontrados na tabela naty_store:', { investimento, pedidos });
-    }
+  const pedidosMatch = markdown.match(/\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
+  if (pedidosMatch) {
+    pedidos = parseInt(pedidosMatch[1]);
+    console.log('📊 Estratégia 1 - Pedidos encontrados:', pedidos);
   }
   
   // Estratégia 2: Buscar por padrões de texto mais flexíveis
-  if (!investimento || !pedidos) {
+  if (!investimento) {
     // Buscar investimento em Ads
-    const investimentoMatch = markdown.match(/(?:Investimento\s+(?:em\s+)?Ads?|Investimento\s+total\s+em\s+Ads?)\s*[:|]\s*R\$\s*([\d.,]+)/i);
-    if (investimentoMatch) {
-      investimento = parseFloat(investimentoMatch[1].replace(/\./g, '').replace(',', '.'));
+    const investimentoMatch2 = markdown.match(/(?:Investimento\s+(?:em\s+)?Ads?|Investimento\s+total\s+em\s+Ads?)\s*[:|]\s*R\$\s*([\d.,]+)/i);
+    if (investimentoMatch2) {
+      investimento = parseFloat(investimentoMatch2[1].replace(/\./g, '').replace(',', '.'));
       console.log('📊 Estratégia 2 - Investimento encontrado:', investimento);
     }
-    
+  }
+  
+  if (!pedidos) {
     // Buscar pedidos pagos
-    const pedidosMatch = markdown.match(/(?:Pedidos\s+Pagos(?:\s+Mês)?|Pedidos\s+via\s+Ads?|Pedidos\s+Pagos\s+Mês)\s*[:|]\s*(\d+)/i);
-    if (pedidosMatch) {
-      pedidos = parseInt(pedidosMatch[1]);
+    const pedidosMatch2 = markdown.match(/(?:Pedidos\s+Pagos(?:\s+Mês)?|Pedidos\s+via\s+Ads?|Pedidos\s+Pagos\s+Mês)\s*[:|]\s*(\d+)/i);
+    if (pedidosMatch2) {
+      pedidos = parseInt(pedidosMatch2[1]);
       console.log('📊 Estratégia 2 - Pedidos encontrados:', pedidos);
     }
   }
   
   // Estratégia 3: Buscar por valores na tabela de forma mais genérica
-  if (!investimento || !pedidos) {
+  if (!investimento) {
     // Buscar qualquer valor R$ na linha do investimento
     const investimentoLinha = markdown.match(/\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$\s*([\d.,]+)\s*\|/i);
     if (investimentoLinha) {
       investimento = parseFloat(investimentoLinha[1].replace(/\./g, '').replace(',', '.'));
       console.log('📊 Estratégia 3 - Investimento na linha:', investimento);
     }
-    
+  }
+  
+  if (!pedidos) {
     // Buscar qualquer número na linha dos pedidos
     const pedidosLinha = markdown.match(/\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
     if (pedidosLinha) {
@@ -105,14 +104,16 @@ function calcularCPA(markdown) {
   }
   
   // Estratégia 4: Buscar por valores isolados no contexto
-  if (!investimento || !pedidos) {
+  if (!investimento) {
     // Buscar investimento próximo à palavra "Ads"
     const investimentoContexto = markdown.match(/R\$\s*([\d.,]+)(?=\s*[^|]*Ads)/i);
     if (investimentoContexto) {
       investimento = parseFloat(investimentoContexto[1].replace(/\./g, '').replace(',', '.'));
       console.log('📊 Estratégia 4 - Investimento no contexto:', investimento);
     }
-    
+  }
+  
+  if (!pedidos) {
     // Buscar pedidos próximo à palavra "Pedidos"
     const pedidosContexto = markdown.match(/(\d+)(?=\s*[^|]*Pedidos)/i);
     if (pedidosContexto) {
@@ -121,37 +122,22 @@ function calcularCPA(markdown) {
     }
   }
   
-  // Estratégia 5: Busca específica para o formato da naty_store
-  if (!investimento || !pedidos) {
-    // Buscar investimento na linha específica
-    const investimentoNaty = markdown.match(/\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$\s*([\d.,]+)\s*\|/i);
-    if (investimentoNaty) {
-      investimento = parseFloat(investimentoNaty[1].replace(/\./g, '').replace(',', '.'));
-      console.log('📊 Estratégia 5 - Investimento naty_store:', investimento);
-    }
-    
-    // Buscar pedidos na linha específica
-    const pedidosNaty = markdown.match(/\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
-    if (pedidosNaty) {
-      pedidos = parseInt(pedidosNaty[1]);
-      console.log('📊 Estratégia 5 - Pedidos naty_store:', pedidos);
-    }
-  }
-  
-  // Estratégia 6: Busca mais agressiva para dados da naty_store
-  if (!investimento || !pedidos) {
+  // Estratégia 5: Busca mais agressiva para dados
+  if (!investimento) {
     // Buscar qualquer valor R$ na linha que contenha "Investimento"
     const investimentoAgressivo = markdown.match(/\|\s*[^|]*Investimento[^|]*\|\s*R\$\s*([\d.,]+)\s*\|/i);
     if (investimentoAgressivo) {
       investimento = parseFloat(investimentoAgressivo[1].replace(/\./g, '').replace(',', '.'));
-      console.log('📊 Estratégia 6 - Investimento agressivo:', investimento);
+      console.log('📊 Estratégia 5 - Investimento agressivo:', investimento);
     }
-    
+  }
+  
+  if (!pedidos) {
     // Buscar qualquer número na linha que contenha "Pedidos"
     const pedidosAgressivo = markdown.match(/\|\s*[^|]*Pedidos[^|]*\|\s*(\d+)\s*\|/i);
     if (pedidosAgressivo) {
       pedidos = parseInt(pedidosAgressivo[1]);
-      console.log('📊 Estratégia 6 - Pedidos agressivo:', pedidos);
+      console.log('📊 Estratégia 5 - Pedidos agressivo:', pedidos);
     }
   }
 
