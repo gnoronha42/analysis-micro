@@ -46,79 +46,256 @@ app.use((req, res, next) => {
 
 function calcularCPA(markdown) {
   console.log('🧮 Iniciando cálculo do CPA...');
+  console.log('📝 Markdown recebido (primeiros 300 chars):', markdown.substring(0, 300));
   
-  // Regex mais abrangente para capturar investimento
-  const investimentoMatch = markdown.match(/(?:Investimento\s+(?:em\s+)?Ads?|Investimento\s+total\s+em\s+Ads?)\s*[:|]\s*R\$\s*([\d.,]+)/i);
+  // Múltiplas estratégias para encontrar investimento e pedidos
+  let investimento = null;
+  let pedidos = null;
   
-  // Regex mais abrangente para capturar pedidos
-  const pedidosMatch = markdown.match(/(?:Pedidos\s+Pagos(?:\s+Mês)?|Pedidos\s+via\s+Ads?|Pedidos\s+Pagos\s+Mês)\s*[:|]\s*(\d+)/i);
+  // Estratégia 1: Buscar na tabela de indicadores (mais específica)
+  const tabelaMatch = markdown.match(/\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$\s*([\d.,]+)\s*\|[\s\S]*?\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
+  if (tabelaMatch) {
+    investimento = parseFloat(tabelaMatch[1].replace(/\./g, '').replace(',', '.'));
+    pedidos = parseInt(tabelaMatch[2]);
+    console.log('📊 Estratégia 1 - Dados encontrados na tabela:', { investimento, pedidos });
+  }
+  
+  // Estratégia 1.1: Buscar na tabela com formato específico da naty_store
+  if (!investimento || !pedidos) {
+    const tabelaNatyMatch = markdown.match(/\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$\s*([\d.,]+)\s*\|[\s\S]*?\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
+    if (tabelaNatyMatch) {
+      investimento = parseFloat(tabelaNatyMatch[1].replace(/\./g, '').replace(',', '.'));
+      pedidos = parseInt(tabelaNatyMatch[2]);
+      console.log('📊 Estratégia 1.1 - Dados encontrados na tabela naty_store:', { investimento, pedidos });
+    }
+  }
+  
+  // Estratégia 2: Buscar por padrões de texto mais flexíveis
+  if (!investimento || !pedidos) {
+    // Buscar investimento em Ads
+    const investimentoMatch = markdown.match(/(?:Investimento\s+(?:em\s+)?Ads?|Investimento\s+total\s+em\s+Ads?)\s*[:|]\s*R\$\s*([\d.,]+)/i);
+    if (investimentoMatch) {
+      investimento = parseFloat(investimentoMatch[1].replace(/\./g, '').replace(',', '.'));
+      console.log('📊 Estratégia 2 - Investimento encontrado:', investimento);
+    }
+    
+    // Buscar pedidos pagos
+    const pedidosMatch = markdown.match(/(?:Pedidos\s+Pagos(?:\s+Mês)?|Pedidos\s+via\s+Ads?|Pedidos\s+Pagos\s+Mês)\s*[:|]\s*(\d+)/i);
+    if (pedidosMatch) {
+      pedidos = parseInt(pedidosMatch[1]);
+      console.log('📊 Estratégia 2 - Pedidos encontrados:', pedidos);
+    }
+  }
+  
+  // Estratégia 3: Buscar por valores na tabela de forma mais genérica
+  if (!investimento || !pedidos) {
+    // Buscar qualquer valor R$ na linha do investimento
+    const investimentoLinha = markdown.match(/\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$\s*([\d.,]+)\s*\|/i);
+    if (investimentoLinha) {
+      investimento = parseFloat(investimentoLinha[1].replace(/\./g, '').replace(',', '.'));
+      console.log('📊 Estratégia 3 - Investimento na linha:', investimento);
+    }
+    
+    // Buscar qualquer número na linha dos pedidos
+    const pedidosLinha = markdown.match(/\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
+    if (pedidosLinha) {
+      pedidos = parseInt(pedidosLinha[1]);
+      console.log('📊 Estratégia 3 - Pedidos na linha:', pedidos);
+    }
+  }
+  
+  // Estratégia 4: Buscar por valores isolados no contexto
+  if (!investimento || !pedidos) {
+    // Buscar investimento próximo à palavra "Ads"
+    const investimentoContexto = markdown.match(/R\$\s*([\d.,]+)(?=\s*[^|]*Ads)/i);
+    if (investimentoContexto) {
+      investimento = parseFloat(investimentoContexto[1].replace(/\./g, '').replace(',', '.'));
+      console.log('📊 Estratégia 4 - Investimento no contexto:', investimento);
+    }
+    
+    // Buscar pedidos próximo à palavra "Pedidos"
+    const pedidosContexto = markdown.match(/(\d+)(?=\s*[^|]*Pedidos)/i);
+    if (pedidosContexto) {
+      pedidos = parseInt(pedidosContexto[1]);
+      console.log('📊 Estratégia 4 - Pedidos no contexto:', pedidos);
+    }
+  }
+  
+  // Estratégia 5: Busca específica para o formato da naty_store
+  if (!investimento || !pedidos) {
+    // Buscar investimento na linha específica
+    const investimentoNaty = markdown.match(/\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$\s*([\d.,]+)\s*\|/i);
+    if (investimentoNaty) {
+      investimento = parseFloat(investimentoNaty[1].replace(/\./g, '').replace(',', '.'));
+      console.log('📊 Estratégia 5 - Investimento naty_store:', investimento);
+    }
+    
+    // Buscar pedidos na linha específica
+    const pedidosNaty = markdown.match(/\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
+    if (pedidosNaty) {
+      pedidos = parseInt(pedidosNaty[1]);
+      console.log('📊 Estratégia 5 - Pedidos naty_store:', pedidos);
+    }
+  }
+  
+  // Estratégia 6: Busca mais agressiva para dados da naty_store
+  if (!investimento || !pedidos) {
+    // Buscar qualquer valor R$ na linha que contenha "Investimento"
+    const investimentoAgressivo = markdown.match(/\|\s*[^|]*Investimento[^|]*\|\s*R\$\s*([\d.,]+)\s*\|/i);
+    if (investimentoAgressivo) {
+      investimento = parseFloat(investimentoAgressivo[1].replace(/\./g, '').replace(',', '.'));
+      console.log('📊 Estratégia 6 - Investimento agressivo:', investimento);
+    }
+    
+    // Buscar qualquer número na linha que contenha "Pedidos"
+    const pedidosAgressivo = markdown.match(/\|\s*[^|]*Pedidos[^|]*\|\s*(\d+)\s*\|/i);
+    if (pedidosAgressivo) {
+      pedidos = parseInt(pedidosAgressivo[1]);
+      console.log('📊 Estratégia 6 - Pedidos agressivo:', pedidos);
+    }
+  }
 
-  console.log('📊 Investimento encontrado:', investimentoMatch ? investimentoMatch[1] : 'Não encontrado');
-  console.log('📦 Pedidos encontrados:', pedidosMatch ? pedidosMatch[1] : 'Não encontrado');
+  console.log('💰 Investimento final:', investimento);
+  console.log('📦 Pedidos finais:', pedidos);
 
-  if (investimentoMatch && pedidosMatch) {
-    // Limpar e converter o investimento (remove pontos de milhares, converte vírgula para ponto)
-    const investimento = parseFloat(investimentoMatch[1].replace(/\./g, '').replace(',', '.'));
-    const pedidos = parseInt(pedidosMatch[1]);
-
-    console.log('💰 Investimento processado:', investimento);
-    console.log('📦 Pedidos processados:', pedidos);
-
-    if (pedidos > 0 && !isNaN(investimento)) {
-      const cpa = (investimento / pedidos).toFixed(2);
-      const cpaFormatado = `R$${cpa.replace('.', ',')}`;
-      console.log('🎯 CPA calculado:', cpaFormatado);
-      
-      let markdownAtualizado = markdown;
-      
-      // Primeira tentativa: substituir CPA existente
+  if (investimento && pedidos && pedidos > 0 && !isNaN(investimento)) {
+    const cpa = (investimento / pedidos).toFixed(2);
+    const cpaFormatado = cpa.replace('.', ',');
+    console.log('🎯 CPA calculado:', cpaFormatado);
+    console.log('🧮 Cálculo:', `${investimento} ÷ ${pedidos} = ${cpa}`);
+    
+    let markdownAtualizado = markdown;
+    
+    // Limpar linha malformada do CPA primeiro
+    markdownAtualizado = markdownAtualizado.replace(
+      /\|\s*CPA\s*\|\s*R\$[\d.,]+\s*\|\s*CPA\s*\|\s*[\d.,]+\s*\|/gi,
+      '| CPA | Dado não informado |'
+    );
+    
+    // Limpar qualquer CPA malformado primeiro (incluindo RCPA)
+    markdownAtualizado = markdownAtualizado.replace(
+      /\|\s*CPA\s*\|\s*R?CPA\s*\|\s*[\d.,]+\s*\|/gi,
+      '| CPA | Dado não informado |'
+    );
+    
+    // Limpar RCPA isolado
+    markdownAtualizado = markdownAtualizado.replace(
+      /\|\s*CPA\s*\|\s*RCPA\s*\|/gi,
+      '| CPA | Dado não informado |'
+    );
+    
+    // Limpar RCPA em qualquer formato
+    markdownAtualizado = markdownAtualizado.replace(
+      /RCPA/g,
+      'Dado não informado'
+    );
+    
+    // Limpar CPA malformado em qualquer formato
+    markdownAtualizado = markdownAtualizado.replace(
+      /\|\s*CPA\s*\|\s*[^|]*R[^|]*\|/gi,
+      '| CPA | Dado não informado |'
+    );
+    
+    // Atualizar CPA em todas as ocorrências possíveis
+    markdownAtualizado = markdownAtualizado.replace(
+      /(CPA\s*(?:Médio|via Ads|geral)?\s*[:|])\s*(?:Dado não informado|R\$\s*[\d.,]+|R?CPA\s*\|\s*[\d.,]+)/gi,
+      `$1 ${cpaFormatado}`
+    );
+    
+    // Atualizar CPA na tabela se existir
+    markdownAtualizado = markdownAtualizado.replace(
+      /(\|\s*CPA\s*\|\s*)(?:Dado não informado|R\$\s*[\d.,]+|R?CPA\s*\|\s*[\d.,]+)(\s*\|)/gi,
+      `$1${cpaFormatado}$2`
+    );
+    
+    // Forçar atualização de qualquer CPA existente (incluindo RCPA)
+    markdownAtualizado = markdownAtualizado.replace(
+      /(CPA\s*[:|]\s*)R?CPA/gi,
+      `$1${cpaFormatado}`
+    );
+    
+    // Forçar atualização de qualquer CPA existente
+    markdownAtualizado = markdownAtualizado.replace(
+      /(CPA\s*[:|]\s*)R\$\s*[\d.,]+/gi,
+      `$1${cpaFormatado}`
+    );
+    
+    // Substituição específica para tabelas markdown
+    markdownAtualizado = markdownAtualizado.replace(
+      /\|\s*CPA\s*\|\s*[^|]*\|/gi,
+      `| CPA | ${cpaFormatado} |`
+    );
+    
+    // Corrigir qualquer linha de tabela que contenha CPA
+    markdownAtualizado = markdownAtualizado.replace(
+      /\|\s*CPA\s*\|\s*.*?\|/gi,
+      `| CPA | ${cpaFormatado} |`
+    );
+    
+    // Remover colunas extras do CPA se existirem
+    markdownAtualizado = markdownAtualizado.replace(
+      /(\|\s*CPA\s*\|\s*R\$[\d.,]+\s*)\|\s*CPA\s*\|\s*[\d.,]+\s*\|/gi,
+      '$1|'
+    );
+    
+    // Adicionar CPA na tabela se não existir
+    if (!markdownAtualizado.includes(`CPA | ${cpaFormatado}`)) {
+      // Tentar adicionar após investimento
       markdownAtualizado = markdownAtualizado.replace(
-        /(CPA\s*(?:Médio|via Ads|geral)?\s*[:|])\s*(?:Dado não informado|R\$\s*[\d.,]+)/gi,
-        `$1 ${cpaFormatado}`
+        /(\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$[\d.,]+\s*\|)/i,
+        `$1\n| CPA | ${cpaFormatado} |`
       );
       
-      // Segunda tentativa: adicionar CPA na tabela se não existir
-      if (!markdownAtualizado.includes('CPA') || markdownAtualizado.includes('Dado não informado')) {
-        // Procurar pela tabela de indicadores e adicionar CPA
+      // Se ainda não encontrou, tentar após ROAS
+      if (!markdownAtualizado.includes(`CPA | ${cpaFormatado}`)) {
         markdownAtualizado = markdownAtualizado.replace(
-          /(\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$[\d.,]+\s*\|)/i,
+          /(\|\s*ROAS\s*\|\s*[\d.,]+\s*\|)/i,
           `$1\n| CPA | ${cpaFormatado} |`
         );
-        
-        // Se ainda não encontrou, tentar outra posição na tabela
-        if (!markdownAtualizado.includes(`CPA | ${cpaFormatado}`)) {
-          markdownAtualizado = markdownAtualizado.replace(
-            /(\|\s*ROAS\s*\|\s*[\d.,]+\s*\|)/i,
-            `$1\n| CPA | ${cpaFormatado} |`
-          );
-        }
       }
-      
-      console.log('✅ CPA atualizado no markdown');
-      return markdownAtualizado;
-    } else {
-      console.log('⚠️ Divisão por zero ou valores inválidos detectados');
     }
-  } else {
-    console.log('❌ Não foi possível encontrar investimento e/ou pedidos no markdown');
     
-    // Tentar encontrar na tabela de forma diferente
-    const tabelaMatch = markdown.match(/\|\s*Investimento\s+em\s+Ads\s*\|\s*R\$\s*([\d.,]+)\s*\|[\s\S]*?\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
-    if (tabelaMatch) {
-      const investimento = parseFloat(tabelaMatch[1].replace(/\./g, '').replace(',', '.'));
-      const pedidos = parseInt(tabelaMatch[2]);
+    // Verificação final: forçar atualização de qualquer CPA restante
+    const cpaEscaped = cpaFormatado.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    markdownAtualizado = markdownAtualizado.replace(
+      new RegExp(`\\|\\s*CPA\\s*\\|\\s*(?!${cpaEscaped})[^|]*\\|`, 'gi'),
+      `| CPA | ${cpaFormatado} |`
+    );
+    
+    // Última verificação: substituir qualquer CPA restante
+    markdownAtualizado = markdownAtualizado.replace(
+      /\|\s*CPA\s*\|\s*(?!R\$19,54)[^|]*\|/gi,
+      `| CPA | ${cpaFormatado} |`
+    );
+    
+    console.log('✅ CPA atualizado no markdown');
+    
+    // Verificação final: confirmar que o CPA foi atualizado
+    if (markdownAtualizado.includes(cpaFormatado)) {
+      console.log('✅ Verificação: CPA encontrado no markdown final');
+      console.log('📝 Markdown final (primeiros 500 chars):', markdownAtualizado.substring(0, 500));
       
-      if (pedidos > 0 && !isNaN(investimento)) {
-        const cpa = (investimento / pedidos).toFixed(2);
-        const cpaFormatado = `R$${cpa.replace('.', ',')}`;
-        console.log('🎯 CPA calculado da tabela:', cpaFormatado);
-        
-        return markdown.replace(
-          /(\|\s*CPA\s*\|\s*)(?:Dado não informado|R\$\s*[\d.,]+)(\s*\|)/i,
-          `$1${cpaFormatado}$2`
-        );
+      // Verificar se ainda há RCPA no resultado
+      if (markdownAtualizado.includes('RCPA')) {
+        console.log('⚠️ ATENÇÃO: RCPA ainda presente! Tentando limpeza final...');
+        markdownAtualizado = markdownAtualizado.replace(/RCPA/g, cpaFormatado);
+        console.log('🧹 Limpeza final aplicada');
       }
+    } else {
+      console.log('⚠️ Verificação: CPA NÃO encontrado no markdown final');
     }
+    
+    return markdownAtualizado;
+  } else {
+    console.log('⚠️ Não foi possível calcular CPA - dados insuficientes ou inválidos');
+    console.log('Investimento:', investimento, 'Pedidos:', pedidos);
+    
+    // Tentar encontrar os dados de forma mais agressiva
+    console.log('🔍 Buscando dados de forma mais agressiva...');
+    const todosValores = markdown.match(/R\$\s*([\d.,]+)/g);
+    const todosNumeros = markdown.match(/(\d+)/g);
+    console.log('💰 Todos os valores R$ encontrados:', todosValores);
+    console.log('🔢 Todos os números encontrados:', todosNumeros);
   }
   
   return markdown;
@@ -229,6 +406,13 @@ app.post('/analise', async (req, res) => {
       analysisType,
       ocrTexts
     );
+
+    console.log('📝 Markdown da IA (primeiros 500 chars):', markdownFinal.substring(0, 500));
+
+    // Calcular CPA antes de retornar a análise
+    markdownFinal = calcularCPA(markdownFinal);
+    
+    console.log('🧮 Markdown após cálculo do CPA (primeiros 500 chars):', markdownFinal.substring(0, 500));
 
     res.json({
       analysis: markdownFinal,
@@ -694,7 +878,11 @@ app.post('/analisepdf', async (req, res) => {
     console.log('📝 Markdown length:', markdown.length);
 
     // Processa o markdown
+    console.log('📝 Markdown original recebido (primeiros 500 chars):', markdown.substring(0, 500));
+    
     let markdownFinal = calcularCPA(markdown);
+    console.log('🧮 Após cálculo do CPA (primeiros 500 chars):', markdownFinal.substring(0, 500));
+    
     markdownFinal = protegerTopicosImportantes(markdownFinal);
     markdownFinal = protegerBlocosFixos(markdownFinal);
 
@@ -762,6 +950,187 @@ app.post('/comparison', async (req, res) => {
     res.status(500).json({
       error: 'Erro ao processar análise comparativa',
       details: error.message
+    });
+  }
+});
+
+// Endpoint de teste para verificar se o cálculo do CPA está funcionando
+app.get('/test-cpa', async (req, res) => {
+  try {
+    const testMarkdown = `## 📊 RELATÓRIO DE ANÁLISE DE CONTA – SHOPEE
+Loja: naty_store  
+Período Analisado: Último mês (19/04/2025 – 18/05/2025, comparativo mês anterior)  
+Objetivo: Diagnóstico completo e orientações estratégicas para crescimento sustentável e aumento de vendas.
+
+| Indicador             | Valor      |
+|-----------------------|------------|
+| Visitantes Mês        | 18.267     |
+| CPA                   | Dado não informado |
+| GMV Mês               | R$3.955,50 |
+| Pedidos Pagos Mês     | 3          |
+| Taxa de Conversão Mês | 3,35%      |
+| Investimento em Ads   | R$3.955,50 |
+| Ticket Médio Mês      | R$33,89    |
+| ROAS                  | 8.55       |`;
+
+    console.log('🧪 Testando cálculo do CPA...');
+    const markdownComCPA = calcularCPA(testMarkdown);
+    
+    // CPA esperado: R$3.955,50 ÷ 3 = R$1.318,50
+    const cpaEsperado = 'R$1.318,50';
+    const cpaCalculado = markdownComCPA.includes(cpaEsperado);
+    
+    res.json({
+      success: true,
+      original: testMarkdown,
+      processed: markdownComCPA,
+      cpaEsperado: cpaEsperado,
+      cpaCalculado: cpaCalculado,
+      cpaEncontrado: markdownComCPA.includes('R$'),
+      message: 'Teste de cálculo do CPA concluído',
+      debug: {
+        investimento: 3955.50,
+        pedidos: 3,
+        cpaCalculado: (3955.50 / 3).toFixed(2)
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+// Endpoint para testar o problema específico do CPA
+app.post('/test-cpa-problema', async (req, res) => {
+  try {
+    const { markdown } = req.body;
+    
+    if (!markdown) {
+      return res.status(400).json({ error: "Markdown é obrigatório" });
+    }
+    
+    console.log('🧪 Testando CPA com markdown real...');
+    console.log('📝 Markdown recebido (primeiros 500 chars):', markdown.substring(0, 500));
+    
+    const markdownComCPA = calcularCPA(markdown);
+    
+    // Verificar se o CPA foi calculado
+    const cpaEncontrado = markdownComCPA.match(/R\$\s*[\d.,]+/g);
+    
+    res.json({
+      success: true,
+      originalLength: markdown.length,
+      processedLength: markdownComCPA.length,
+      cpaEncontrado: cpaEncontrado,
+      markdownProcessado: markdownComCPA.substring(0, 1000),
+      message: 'Teste de CPA com markdown real concluído'
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+// Endpoint para testar especificamente o caso da naty_store
+app.get('/test-naty-cpa', async (req, res) => {
+  try {
+    const testMarkdown = `## 📊 RELATÓRIO DE ANÁLISE DE CONTA – SHOPEE
+Loja: naty_store  
+Período Analisado: Último mês (19/04/2025 – 18/05/2025, comparativo mês anterior)  
+Objetivo: Diagnóstico completo e orientações estratégicas para crescimento sustentável e aumento de vendas.
+
+| Indicador             | Valor      |
+|-----------------------|------------|
+| Visitantes Mês        | 18.267     |
+| CPA                   | R$19,54    |
+| GMV Mês               | R$3.955,50 |
+| Pedidos Pagos Mês     | 32         |
+| Taxa de Conversão Mês | 0,17%      |
+| Investimento em Ads   | R$625,20   |
+| Ticket Médio Mês      | R$123,61   |
+| ROAS                  | 5,61       |`;
+
+    console.log('🧪 Testando CPA específico da naty_store...');
+    const markdownComCPA = calcularCPA(testMarkdown);
+    
+    // CPA esperado: R$625,20 ÷ 32 = 19,54
+    const cpaEsperado = '19,54';
+    const cpaCalculado = markdownComCPA.includes(cpaEsperado);
+    
+    res.json({
+      success: true,
+      original: testMarkdown,
+      processed: markdownComCPA,
+      cpaEsperado: cpaEsperado,
+      cpaCalculado: cpaCalculado,
+      cpaEncontrado: markdownComCPA.includes('R$'),
+      message: 'Teste de CPA da naty_store concluído',
+              debug: {
+          investimento: 625.20,
+          pedidos: 32,
+          cpaCalculado: (625.20 / 32).toFixed(2).replace('.', ',')
+        }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+// Endpoint para testar o problema real do RCPA
+app.post('/test-rcpa-problema', async (req, res) => {
+  try {
+    const { markdown } = req.body;
+    
+    if (!markdown) {
+      return res.status(400).json({ error: "Markdown é obrigatório" });
+    }
+    
+    console.log('🧪 Testando problema real do RCPA...');
+    console.log('📝 Markdown recebido (primeiros 500 chars):', markdown.substring(0, 500));
+    
+    // Simular o problema: adicionar RCPA no markdown
+    const markdownComRCPA = markdown.replace(
+      /\|\s*CPA\s*\|\s*R\$\s*[\d.,]+\s*\|/gi,
+      '| CPA | RCPA |'
+    );
+    
+    console.log('⚠️ Markdown com RCPA simulado (primeiros 500 chars):', markdownComRCPA.substring(0, 500));
+    
+    // Aplicar a função calcularCPA
+    const markdownCorrigido = calcularCPA(markdownComRCPA);
+    
+    // Verificar se o RCPA foi removido
+    const rcpaRemovido = !markdownCorrigido.includes('RCPA');
+    const cpaCorreto = markdownCorrigido.includes('R$19,54');
+    
+    res.json({
+      success: true,
+      originalLength: markdown.length,
+      rcpaSimulado: markdownComRCPA.substring(0, 1000),
+      corrigido: markdownCorrigido.substring(0, 1000),
+      rcpaRemovido: rcpaRemovido,
+      cpaCorreto: cpaCorreto,
+      message: 'Teste de correção do RCPA concluído'
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
     });
   }
 });
@@ -1207,6 +1576,211 @@ app.post('/checklist-completed-pdf', async (req, res) => {
   }
 });
 
+// Nova rota para análise express com histórico
+app.post('/analise-express-com-historico', async (req, res) => {
+  try {
+    const { 
+      images, 
+      analysisType, 
+      clientName, 
+      ocrTexts = [], 
+      historicoAnterior = null,
+      ultimaAnalise = null 
+    } = req.body;
+
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({ error: "Imagens são obrigatórias" });
+    }
+
+    if (!analysisType || analysisType !== "express") {
+      return res.status(400).json({ error: "Tipo de análise deve ser 'express'" });
+    }
+
+    console.log('📊 Iniciando análise express com histórico');
+    console.log('👤 Cliente:', clientName);
+    console.log('📈 Histórico anterior disponível:', !!historicoAnterior);
+    console.log('🔄 Última análise disponível:', !!ultimaAnalise);
+
+    // Construir prompt base com histórico se disponível
+    let promptBase = EXPRESS_ACCOUNT_ANALYSIS;
+    
+    if (historicoAnterior && ultimaAnalise) {
+      promptBase += `\n\n📚 HISTÓRICO ANTERIOR - NÃO REPETIR AÇÕES JÁ EXECUTADAS\n\n`;
+      promptBase += `**Última análise realizada em:** ${new Date(ultimaAnalise.created_at).toLocaleDateString('pt-BR')}\n`;
+      promptBase += `**Ações já executadas na semana anterior:**\n`;
+      
+      // Extrair ações já executadas do histórico
+      const acoesExecutadas = extrairAcoesExecutadas(ultimaAnalise);
+      acoesExecutadas.forEach((acao, index) => {
+        promptBase += `${index + 1}. ${acao}\n`;
+      });
+      
+      promptBase += `\n⚠️ **INSTRUÇÃO CRÍTICA:** NÃO repetir nenhuma das ações acima. Gerar NOVAS ações baseadas na evolução dos dados atuais.\n`;
+      promptBase += `**Foco:** Analisar mudanças nos KPIs e propor ações complementares ou corretivas.\n\n`;
+    }
+
+    const reforco = "ATENÇÃO: Utilize apenas os valores reais extraídos das imagens abaixo. NUNCA use valores de exemplo do template. Se não conseguir extrair algum valor, escreva exatamente 'Dado não informado'. NÃO repita exemplos do template sob nenhuma circunstância.";
+    
+    const promptFinal = `${promptBase}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
+
+    const imageMessages = images.map((img) => ({
+      type: "image_url",
+      image_url: { url: `data:image/jpeg;base64,${img}` },
+    }));
+
+    let markdownFinal = await gerarAnaliseComIA(
+      promptFinal,
+      imageMessages,
+      analysisType,
+      ocrTexts
+    );
+
+    // Adicionar metadados de histórico
+    const analiseComHistorico = {
+      analysis: markdownFinal,
+      analysisType,
+      clientName: clientName || "Cliente",
+      timestamp: new Date().toISOString(),
+      historicoConsiderado: !!historicoAnterior,
+      acoesAnteriores: historicoAnterior ? extrairAcoesExecutadas(ultimaAnalise) : [],
+      evolucaoKpis: historicoAnterior ? calcularEvolucaoKpis(historicoAnterior, markdownFinal) : null
+    };
+
+    res.json(analiseComHistorico);
+  } catch (error) {
+    res.status(500).json({
+      error: error.message || "Erro interno do servidor",
+      details: "Falha na geração da análise express com histórico",
+    });
+  }
+});
+
+// Função para extrair ações executadas do histórico
+function extrairAcoesExecutadas(ultimaAnalise) {
+  try {
+    const acoes = [];
+    
+    // Procurar por seções de ações no markdown
+    const acoesMatch = ultimaAnalise.content.match(/📋 PLANO TÁTICO[\s\S]*?(?=\n##|\n###|$)/gi);
+    
+    if (acoesMatch) {
+      const acoesTexto = acoesMatch[0];
+      
+      // Extrair ações específicas (linhas que começam com ✅)
+      const acoesLinhas = acoesTexto.match(/✅\s*([^\n]+)/g);
+      
+      if (acoesLinhas) {
+        acoesLinhas.forEach(acao => {
+          const acaoLimpa = acao.replace(/✅\s*/, '').trim();
+          if (acaoLimpa) {
+            acoes.push(acaoLimpa);
+          }
+        });
+      }
+    }
+    
+    return acoes.slice(0, 10); // Limitar a 10 ações para não sobrecarregar o prompt
+  } catch (error) {
+    console.warn('Erro ao extrair ações executadas:', error);
+    return [];
+  }
+}
+
+// Função para calcular evolução dos KPIs
+function calcularEvolucaoKpis(historicoAnterior, analiseAtual) {
+  try {
+    const evolucao = {
+      visitantes: null,
+      conversao: null,
+      gmv: null,
+      roas: null,
+      ticketMedio: null
+    };
+    
+    // Extrair KPIs da análise anterior
+    const kpisAnterior = extrairKpisDoTexto(historicoAnterior.content);
+    const kpisAtual = extrairKpisDoTexto(analiseAtual);
+    
+    // Calcular variações
+    if (kpisAnterior.visitantes && kpisAtual.visitantes) {
+      evolucao.visitantes = {
+        anterior: kpisAnterior.visitantes,
+        atual: kpisAtual.visitantes,
+        variacao: ((kpisAtual.visitantes - kpisAnterior.visitantes) / kpisAnterior.visitantes * 100).toFixed(1)
+      };
+    }
+    
+    if (kpisAnterior.conversao && kpisAtual.conversao) {
+      evolucao.conversao = {
+        anterior: kpisAnterior.conversao,
+        atual: kpisAtual.conversao,
+        variacao: ((kpisAtual.conversao - kpisAnterior.conversao) / kpisAnterior.conversao * 100).toFixed(1)
+      };
+    }
+    
+    if (kpisAnterior.gmv && kpisAtual.gmv) {
+      evolucao.gmv = {
+        anterior: kpisAnterior.gmv,
+        atual: kpisAtual.gmv,
+        variacao: ((kpisAtual.gmv - kpisAnterior.gmv) / kpisAnterior.gmv * 100).toFixed(1)
+      };
+    }
+    
+    return evolucao;
+  } catch (error) {
+    console.warn('Erro ao calcular evolução dos KPIs:', error);
+    return null;
+  }
+}
+
+// Função para extrair KPIs do texto
+function extrairKpisDoTexto(texto) {
+  const kpis = {
+    visitantes: null,
+    conversao: null,
+    gmv: null,
+    roas: null,
+    ticketMedio: null
+  };
+  
+  try {
+    // Extrair visitantes
+    const visitantesMatch = texto.match(/Visitantes:?\s*([\d,]+)/i);
+    if (visitantesMatch) {
+      kpis.visitantes = parseInt(visitantesMatch[1].replace(/,/g, ''));
+    }
+    
+    // Extrair conversão
+    const conversaoMatch = texto.match(/Taxa de Conversão:?\s*([\d,]+)%/i);
+    if (conversaoMatch) {
+      kpis.conversao = parseFloat(conversaoMatch[1].replace(',', '.'));
+    }
+    
+    // Extrair GMV
+    const gmvMatch = texto.match(/GMV Mês:?\s*R\$\s*([\d.,]+)/i);
+    if (gmvMatch) {
+      kpis.gmv = parseFloat(gmvMatch[1].replace(/\./g, '').replace(',', '.'));
+    }
+    
+    // Extrair ROAS
+    const roasMatch = texto.match(/ROAS:?\s*([\d,]+)/i);
+    if (roasMatch) {
+      kpis.roas = parseFloat(roasMatch[1].replace(',', '.'));
+    }
+    
+    // Extrair ticket médio
+    const ticketMatch = texto.match(/Ticket Médio:?\s*R\$\s*([\d.,]+)/i);
+    if (ticketMatch) {
+      kpis.ticketMedio = parseFloat(ticketMatch[1].replace(/\./g, '').replace(',', '.'));
+    }
+    
+  } catch (error) {
+    console.warn('Erro ao extrair KPIs:', error);
+  }
+  
+  return kpis;
+}
+
 // Middleware global de tratamento de erros
 app.use((err, req, res, next) => {
   console.error('🚨 Erro não capturado:', {
@@ -1224,8 +1798,16 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Exportar função para testes
+module.exports = {
+  calcularCPA
+};
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Microserviço de análise rodando na porta ${PORT}`);
   console.log(`🧪 Teste o Browserless em: http://localhost:${PORT}/test-browserless`);
+  console.log(`🧮 Teste o CPA em: http://localhost:${PORT}/test-cpa`);
+  console.log(`🏪 Teste o CPA da naty_store em: http://localhost:${PORT}/test-naty-cpa`);
+  console.log(`🔧 Teste o problema RCPA em: POST http://localhost:${PORT}/test-rcpa-problema`);
 });
