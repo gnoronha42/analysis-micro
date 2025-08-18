@@ -59,9 +59,9 @@ function calcularCPA(markdown) {
     console.log('📊 Estratégia 1 - Investimento encontrado:', investimento);
   }
   
-  const pedidosMatch = markdown.match(/\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
+  const pedidosMatch = markdown.match(/\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*([\d.]+)\s*\|/i);
   if (pedidosMatch) {
-    pedidos = parseInt(pedidosMatch[1]);
+    pedidos = parseInt(pedidosMatch[1].replace(/\./g, ''));
     console.log('📊 Estratégia 1 - Pedidos encontrados:', pedidos);
   }
   
@@ -77,9 +77,9 @@ function calcularCPA(markdown) {
   
   if (!pedidos) {
     // Buscar pedidos pagos
-    const pedidosMatch2 = markdown.match(/(?:Pedidos\s+Pagos(?:\s+Mês)?|Pedidos\s+via\s+Ads?|Pedidos\s+Pagos\s+Mês)\s*[:|]\s*(\d+)/i);
+    const pedidosMatch2 = markdown.match(/(?:Pedidos\s+Pagos(?:\s+Mês)?|Pedidos\s+via\s+Ads?|Pedidos\s+Pagos\s+Mês)\s*[:|]\s*([\d.]+)/i);
     if (pedidosMatch2) {
-      pedidos = parseInt(pedidosMatch2[1]);
+      pedidos = parseInt(pedidosMatch2[1].replace(/\./g, ''));
       console.log('📊 Estratégia 2 - Pedidos encontrados:', pedidos);
     }
   }
@@ -96,9 +96,9 @@ function calcularCPA(markdown) {
   
   if (!pedidos) {
     // Buscar qualquer número na linha dos pedidos
-    const pedidosLinha = markdown.match(/\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*(\d+)\s*\|/i);
+    const pedidosLinha = markdown.match(/\|\s*Pedidos\s+Pagos\s+Mês\s*\|\s*([\d.]+)\s*\|/i);
     if (pedidosLinha) {
-      pedidos = parseInt(pedidosLinha[1]);
+      pedidos = parseInt(pedidosLinha[1].replace(/\./g, ''));
       console.log('📊 Estratégia 3 - Pedidos na linha:', pedidos);
     }
   }
@@ -115,9 +115,9 @@ function calcularCPA(markdown) {
   
   if (!pedidos) {
     // Buscar pedidos próximo à palavra "Pedidos"
-    const pedidosContexto = markdown.match(/(\d+)(?=\s*[^|]*Pedidos)/i);
+    const pedidosContexto = markdown.match(/([\d.]+)(?=\s*[^|]*Pedidos)/i);
     if (pedidosContexto) {
-      pedidos = parseInt(pedidosContexto[1]);
+      pedidos = parseInt(pedidosContexto[1].replace(/\./g, ''));
       console.log('📊 Estratégia 4 - Pedidos no contexto:', pedidos);
     }
   }
@@ -134,9 +134,9 @@ function calcularCPA(markdown) {
   
   if (!pedidos) {
     // Buscar qualquer número na linha que contenha "Pedidos"
-    const pedidosAgressivo = markdown.match(/\|\s*[^|]*Pedidos[^|]*\|\s*(\d+)\s*\|/i);
+    const pedidosAgressivo = markdown.match(/\|\s*[^|]*Pedidos[^|]*\|\s*([\d.]+)\s*\|/i);
     if (pedidosAgressivo) {
-      pedidos = parseInt(pedidosAgressivo[1]);
+      pedidos = parseInt(pedidosAgressivo[1].replace(/\./g, ''));
       console.log('📊 Estratégia 5 - Pedidos agressivo:', pedidos);
     }
   }
@@ -250,7 +250,7 @@ function calcularCPA(markdown) {
     
     // Última verificação: substituir qualquer CPA restante
     markdownAtualizado = markdownAtualizado.replace(
-      /\|\s*CPA\s*\|\s*(?!R\$19,54)[^|]*\|/gi,
+      /\|\s*CPA\s*\|\s*(?!4,96)[^|]*\|/gi,
       `| CPA | ${cpaFormatado} |`
     );
     
