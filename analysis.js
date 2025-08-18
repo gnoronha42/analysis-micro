@@ -856,10 +856,7 @@ Ticket Médio: R$XX,XX (↑/↓ XX%)
 Investimento em Ads: R$XXX
 ROAS: X,XX (↑/↓ frente ao benchmark mínimo de 8x)
 
-🔔 ALERTA CRÍTICO OBRIGATÓRIO
-Baseado no principal gargalo técnico, incluir UM dos alertas:
-📣 ⚠ POTENCIAL QUEDA DEVIDO AO TRÁFEGO - ACIONAR TIME DE SHOPEE ADS
-📣 ⚠ POTENCIAL QUEDA DEVIDO A [PROBLEMA ESPECÍFICO] - ACIONAR CONSULTOR DA CONTA
+
 
 📊 DIAGNÓSTICO TÉCNICO DO FUNIL  
 Texto de 6-8 linhas explicando:
