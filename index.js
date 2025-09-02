@@ -1185,10 +1185,18 @@ function filtrarItensCompletados(blocks) {
 
 // Função para gerar markdown apenas com itens concluídos
 function generateCompletedChecklistMarkdown(blocks, clientName) {
-  const completedBlocks = filtrarItensCompletados(blocks);
+  console.log('📝 Iniciando geração de markdown para checklist concluído');
+  console.log('👤 Nome do cliente recebido na função:', clientName);
+  console.log('📊 Blocos recebidos:', blocks.length);
+  
+  const completedBlocks = filtrarBlocosComAlgumConcluido(blocks);
+  console.log('📊 Blocos com itens concluídos:', completedBlocks.length);
   
   if (completedBlocks.length === 0) {
-    return `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n**Cliente:** ${clientName}\n\n*Nenhum item foi concluído ainda.*`;
+    const markdownVazio = `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n**Cliente:** ${clientName}\n\n*Nenhum item foi concluído ainda.*`;
+    console.log('📝 Markdown vazio gerado:', markdownVazio);
+    console.log('👤 Nome do cliente no markdown vazio:', markdownVazio.includes(clientName));
+    return markdownVazio;
   }
 
   let md = `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n`;
@@ -1200,6 +1208,9 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
     hour: '2-digit',
     minute: '2-digit'
   })}\n\n`;
+
+  console.log('📝 Markdown inicial gerado (primeiros 200 chars):', md.substring(0, 200));
+  console.log('👤 Nome do cliente no markdown inicial:', md.includes(clientName));
 
   let totalConcluidos = 0;
   
@@ -1233,17 +1244,31 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
     });
   });
 
+  md += `## 📊 RESUMO EXECUTIVO\n\n`;
+  md += `- **Total de Itens Concluídos:** ${totalConcluidos}\n`;
+  md += `- **Blocos com Atividades Finalizadas:** ${completedBlocks.length}\n`;
+  md += `- **Taxa de Progresso:** Blocos com pelo menos um item concluído\n\n`;
+
+  console.log('📝 Markdown final gerado (primeiros 500 chars):', md.substring(0, 500));
+  console.log('👤 Nome do cliente no markdown final:', md.includes(clientName));
+  console.log('📊 Total de caracteres no markdown:', md.length);
 
   return md;
 }
 
 // Função HTML específica para itens concluídos
 function gerarHtmlChecklistConcluidos(markdown, clientName) {
+  console.log('🔧 Gerando HTML para checklist concluídos');
+  console.log('👤 Nome do cliente recebido:', clientName);
+  console.log('📝 Markdown recebido (primeiros 200 chars):', markdown.substring(0, 200));
+  
   // Adiciona uma página separada para o resumo executivo
   // e evita quebra de página dentro do bloco do resumo
   const htmlContent = `
     <html>
       <head>
+        <meta charset="UTF-8">
+        <title>Checklist Concluídos - ${clientName}</title>
         <style>
             body {
   font-family: 'Arial', sans-serif;
@@ -1334,13 +1359,55 @@ hr {
   page-break-inside: avoid;
   break-inside: avoid;
 }
+
+.client-header {
+  background: linear-gradient(135deg, #f57c00 0%, #ff9800 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(245, 124, 0, 0.3);
+}
+
+.client-header h1 {
+  color: white;
+  background: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+  font-size: 28px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.client-header p {
+  margin: 10px 0 0 0;
+  font-size: 16px;
+  opacity: 0.9;
+}
         </style>
       </head>
       <body>
+        <div class="client-header">
+          <h1>✅ CHECKLIST OPERACIONAL</h1>
+          <p><strong>Cliente:</strong> ${clientName}</p>
+          <p><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}</p>
+        </div>
+        
         ${splitMarkdownWithExecutiveSummary(marked, markdown)}
       </body>
     </html>
   `;
+  
+  console.log('✅ HTML gerado com sucesso');
+  console.log('👤 Nome do cliente incluído no HTML:', htmlContent.includes(clientName));
+  
   return htmlContent;
 }
 
@@ -1378,10 +1445,18 @@ function filtrarBlocosComAlgumConcluido(blocks) {
 
 // Função para gerar markdown apenas com blocos com pelo menos um item concluído
 function generateCompletedChecklistMarkdown(blocks, clientName) {
+  console.log('📝 Iniciando geração de markdown para checklist concluído');
+  console.log('👤 Nome do cliente recebido na função:', clientName);
+  console.log('📊 Blocos recebidos:', blocks.length);
+  
   const completedBlocks = filtrarBlocosComAlgumConcluido(blocks);
+  console.log('📊 Blocos com itens concluídos:', completedBlocks.length);
   
   if (completedBlocks.length === 0) {
-    return `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n**Cliente:** ${clientName}\n\n*Nenhum item foi concluído ainda.*`;
+    const markdownVazio = `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n**Cliente:** ${clientName}\n\n*Nenhum item foi concluído ainda.*`;
+    console.log('📝 Markdown vazio gerado:', markdownVazio);
+    console.log('👤 Nome do cliente no markdown vazio:', markdownVazio.includes(clientName));
+    return markdownVazio;
   }
 
   let md = `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n`;
@@ -1393,6 +1468,9 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
     hour: '2-digit',
     minute: '2-digit'
   })}\n\n`;
+
+  console.log('📝 Markdown inicial gerado (primeiros 200 chars):', md.substring(0, 200));
+  console.log('👤 Nome do cliente no markdown inicial:', md.includes(clientName));
 
   let totalConcluidos = 0;
   
@@ -1457,17 +1535,28 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
   md += `- **Blocos com Atividades Finalizadas:** ${completedBlocks.length}\n`;
   md += `- **Taxa de Progresso:** Blocos com pelo menos um item concluído\n\n`;
 
+  console.log('📝 Markdown final gerado (primeiros 500 chars):', md.substring(0, 500));
+  console.log('👤 Nome do cliente no markdown final:', md.includes(clientName));
+  console.log('📊 Total de caracteres no markdown:', md.length);
+
   return md;
 }
 
 // Nova rota no servidor Express para PDF de itens concluídos
 app.post('/checklist-completed-pdf', async (req, res) => {
   console.log('📥 Recebida requisição para PDF de itens concluídos');
+  console.log('📊 Body completo recebido:', JSON.stringify(req.body, null, 2));
   
   try {
     const { blocks, clientName, markdown } = req.body;
 
+    console.log('🔍 Parâmetros extraídos:');
+    console.log('  - blocks:', typeof blocks, Array.isArray(blocks) ? blocks.length : 'N/A');
+    console.log('  - clientName:', typeof clientName, clientName);
+    console.log('  - markdown:', typeof markdown, markdown ? markdown.length : 'N/A');
+
     if (!blocks || !Array.isArray(blocks)) {
+      console.log('❌ Validação falhou: blocks inválido');
       return res.status(400).json({ 
         error: "Blocos do checklist são obrigatórios",
         received: typeof blocks
@@ -1475,6 +1564,7 @@ app.post('/checklist-completed-pdf', async (req, res) => {
     }
 
     if (!clientName || typeof clientName !== 'string') {
+      console.log('❌ Validação falhou: clientName inválido');
       return res.status(400).json({ 
         error: "Nome do cliente é obrigatório",
         received: typeof clientName
@@ -1483,8 +1573,10 @@ app.post('/checklist-completed-pdf', async (req, res) => {
 
     // Filtrar apenas blocos com pelo menos um item concluído
     const completedBlocks = filtrarBlocosComAlgumConcluido(blocks);
+    console.log('📊 Blocos filtrados:', completedBlocks.length);
 
     if (completedBlocks.length === 0) {
+      console.log('❌ Nenhum item concluído encontrado');
       return res.status(400).json({
         error: "Nenhum item concluído para gerar o PDF."
       });
@@ -1496,9 +1588,13 @@ app.post('/checklist-completed-pdf', async (req, res) => {
 
     // Gerar markdown apenas com os blocos e itens concluídos
     const finalMarkdown = generateCompletedChecklistMarkdown(completedBlocks, clientName);
+    console.log('📝 Markdown gerado (primeiros 300 chars):', finalMarkdown.substring(0, 300));
+    console.log('👤 Nome do cliente no markdown:', finalMarkdown.includes(clientName));
     
     // Gerar HTML específico para itens concluídos
     const htmlContent = gerarHtmlChecklistConcluidos(finalMarkdown, clientName);
+    console.log('🌐 HTML gerado (primeiros 500 chars):', htmlContent.substring(0, 500));
+    console.log('👤 Nome do cliente no HTML:', htmlContent.includes(clientName));
 
     // Configurar Browserless
     const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN;
