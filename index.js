@@ -4,6 +4,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
 const { processarComparacao } = require('./comparison');
+const { processarCSVAnuncios, gerarInsightsCSV } = require("./csv-processor");
 const { marked } = require('marked');
 
 const cors = require('cors');
@@ -413,6 +414,116 @@ app.post('/analise', async (req, res) => {
     });
   }
 });
+
+// Nova rota para análise de CSV
+app.post('/analise-csv', async (req, res) => {
+  try {
+    const { csvContent, analysisType, clientName } = req.body;
+
+    console.log('📊 Recebida requisição de análise CSV');
+    console.log('👤 Cliente:', clientName);
+    console.log('📋 Tipo:', analysisType);
+    console.log('📄 Tamanho do CSV:', csvContent?.length || 0);
+
+    if (!csvContent || typeof csvContent !== 'string') {
+      return res.status(400).json({ error: "Conteúdo CSV é obrigatório" });
+    }
+
+    if (analysisType !== "ads") {
+      return res.status(400).json({ error: "Análise CSV disponível apenas para tipo 'ads'" });
+    }
+
+    // Processar CSV
+    const dadosProcessados = processarCSVAnuncios(csvContent);
+    const insights = gerarInsightsCSV(dadosProcessados);
+    
+    // Criar prompt específico para CSV
+    const csvPrompt = `${ADVANCED_ADS_PROMPT}
+
+ANÁLISE BASEADA EM DADOS CSV DE ANÚNCIOS SHOPEE
+
+Você recebeu dados estruturados de um relatório CSV de anúncios Shopee com as seguintes informações:
+
+**DADOS DA LOJA:**
+- Nome da Loja: ${insights.dadosLoja.nomeLoja}
+- Nome de Usuário: ${insights.dadosLoja.nomeUsuario}
+- ID da Loja: ${insights.dadosLoja.idLoja}
+- Período do Relatório: ${insights.dadosLoja.periodo}
+- Data de Criação: ${insights.dadosLoja.dataRelatorio}
+
+**RESUMO GERAL DOS ANÚNCIOS:**
+- Total de Anúncios: ${insights.resumoGeral.totalAnuncios}
+- Anúncios Ativos: ${insights.resumoGeral.anunciosAtivos}
+- Anúncios Pausados: ${insights.resumoGeral.anunciosPausados}
+- Anúncios Encerrados: ${insights.resumoGeral.anunciosEncerrados}
+- Total de Impressões: ${insights.resumoGeral.totalImpressoes.toLocaleString('pt-BR')}
+- Total de Cliques: ${insights.resumoGeral.totalCliques.toLocaleString('pt-BR')}
+- Total de Conversões: ${insights.resumoGeral.totalConversoes}
+- Total de Despesas: R$ ${insights.resumoGeral.totalDespesas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+- Total GMV: R$ ${insights.resumoGeral.totalGMV.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+- Total Itens Vendidos: ${insights.resumoGeral.totalItensVendidos}
+- CTR Médio: ${insights.resumoGeral.ctrMedio}%
+- Taxa de Conversão Média: ${insights.resumoGeral.taxaConversaoMedia}%
+- ROAS Geral: ${insights.resumoGeral.roasGeral}
+- CPA Médio: R$ ${insights.resumoGeral.cpaMedio}
+
+**TOP 5 ANÚNCIOS POR ROAS:**
+${insights.topPerformers.top5ROAS.map((anuncio, i) => 
+  `${i+1}. ${anuncio.nome} - ROAS: ${anuncio.roas} - GMV: R$ ${anuncio.gmv.toFixed(2)}`
+).join('\n')}
+
+**TOP 5 ANÚNCIOS POR GMV:**
+${insights.topPerformers.top5GMV.map((anuncio, i) => 
+  `${i+1}. ${anuncio.nome} - GMV: R$ ${anuncio.gmv.toFixed(2)} - ROAS: ${anuncio.roas}`
+).join('\n')}
+
+**ANÚNCIOS COM PROBLEMAS IDENTIFICADOS (${insights.problemasIdentificados.length}):**
+${insights.problemasIdentificados.map(anuncio => 
+  `- ${anuncio.nome} - Status: ${anuncio.status} - ROAS: ${anuncio.roas} - CTR: ${anuncio.ctr} - Conversões: ${anuncio.conversoes}`
+).join('\n')}
+
+INSTRUÇÕES:
+1. Analise estes dados estruturados e gere um relatório detalhado
+2. Identifique padrões, oportunidades e problemas
+3. Forneça recomendações estratégicas específicas
+4. Calcule e apresente métricas importantes
+5. Sugira ações práticas para otimização
+6. Use os dados reais fornecidos, nunca invente valores
+
+Gere um relatório completo e profissional baseado exclusivamente nestes dados CSV.`;
+
+    // Gerar análise com IA usando os dados estruturados
+    let markdownFinal = await gerarAnaliseComIA(
+      csvPrompt,
+      [], // Não há imagens para CSV
+      analysisType,
+      [JSON.stringify(insights, null, 2)] // Passar insights como OCR text
+    );
+
+    console.log('📝 Análise CSV gerada com sucesso');
+
+    res.json({
+      analysis: markdownFinal,
+      analysisType,
+      clientName: clientName || "Cliente",
+      timestamp: new Date().toISOString(),
+      csvData: {
+        totalAnuncios: insights.resumoGeral.totalAnuncios,
+        roasGeral: insights.resumoGeral.roasGeral,
+        totalGMV: insights.resumoGeral.totalGMV,
+        totalDespesas: insights.resumoGeral.totalDespesas
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro na análise CSV:', error);
+    res.status(500).json({
+      error: error.message || "Erro interno do servidor",
+      details: "Falha na análise do CSV",
+    });
+  }
+});
+
 
 function protegerTopicosImportantes(markdown) {
   const titulosImportantes = [
