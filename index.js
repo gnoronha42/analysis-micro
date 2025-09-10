@@ -469,17 +469,17 @@ Você recebeu dados estruturados de um relatório CSV de anúncios Shopee com as
 
 **TOP 5 ANÚNCIOS POR ROAS:**
 ${insights.topPerformers.top5ROAS.map((anuncio, i) => 
-  `${i+1}. ${anuncio.nome} - ROAS: ${anuncio.roas} - GMV: R$ ${anuncio.gmv.toFixed(2)}`
+  `${i+1}. ${anuncio.nome} (ID: ${anuncio.idProduto}) - ROAS: ${anuncio.roas} - GMV: R$ ${anuncio.gmv.toFixed(2)}`
 ).join('\n')}
 
 **TOP 5 ANÚNCIOS POR GMV:**
 ${insights.topPerformers.top5GMV.map((anuncio, i) => 
-  `${i+1}. ${anuncio.nome} - GMV: R$ ${anuncio.gmv.toFixed(2)} - ROAS: ${anuncio.roas}`
+  `${i+1}. ${anuncio.nome} (ID: ${anuncio.idProduto}) - GMV: R$ ${anuncio.gmv.toFixed(2)} - ROAS: ${anuncio.roas}`
 ).join('\n')}
 
 **ANÚNCIOS COM PROBLEMAS IDENTIFICADOS (${insights.problemasIdentificados.length}):**
 ${insights.problemasIdentificados.map(anuncio => 
-  `- ${anuncio.nome} - Status: ${anuncio.status} - ROAS: ${anuncio.roas} - CTR: ${anuncio.ctr} - Conversões: ${anuncio.conversoes}`
+  `- ${anuncio.nome} (ID: ${anuncio.idProduto}) - Status: ${anuncio.status} - ROAS: ${anuncio.roas} - CTR: ${anuncio.ctr} - Conversões: ${anuncio.conversoes}`
 ).join('\n')}
 
 INSTRUÇÕES:
