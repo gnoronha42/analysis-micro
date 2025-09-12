@@ -26,7 +26,8 @@ function processarCSVAnuncios(csvContent) {
         for (let j = i + 1; j < linhas.length; j++) {
           const linhaAnuncio = linhas[j].trim();
           if (linhaAnuncio && !linhaAnuncio.startsWith(',')) {
-            const dados = linhaAnuncio.split(',');
+            // Melhor tratamento de CSV com aspas
+            const dados = linhaAnuncio.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || linhaAnuncio.split(',');
             if (dados.length >= 24) { // Verificar se tem dados suficientes
               anuncios.push({
                 numero: dados[0],

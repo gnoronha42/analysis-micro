@@ -437,12 +437,12 @@ app.post('/analise-csv', async (req, res) => {
     const dadosProcessados = processarCSVAnuncios(csvContent);
     const insights = gerarInsightsCSV(dadosProcessados);
     
-    // Criar prompt específico para CSV
+    // Criar prompt específico para CSV com dados estruturados
     const csvPrompt = `${ADVANCED_ADS_PROMPT}
 
-ANÁLISE BASEADA EM DADOS CSV DE ANÚNCIOS SHOPEE
+🚨 ANÁLISE BASEADA EM DADOS CSV ESTRUTURADOS - SHOPEE ADS 🚨
 
-Você recebeu dados estruturados de um relatório CSV de anúncios Shopee com as seguintes informações:
+ATENÇÃO: Você está analisando dados ESTRUTURADOS de CSV. Use APENAS os valores fornecidos abaixo.
 
 **DADOS DA LOJA:**
 - Nome da Loja: ${insights.dadosLoja.nomeLoja}
@@ -459,7 +459,7 @@ Você recebeu dados estruturados de um relatório CSV de anúncios Shopee com as
 - Total de Impressões: ${insights.resumoGeral.totalImpressoes.toLocaleString('pt-BR')}
 - Total de Cliques: ${insights.resumoGeral.totalCliques.toLocaleString('pt-BR')}
 - Total de Conversões: ${insights.resumoGeral.totalConversoes}
-- Total de Despesas: R$ ${insights.resumoGeral.totalDespesas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+- Total de Despesas (INVESTIMENTO): R$ ${insights.resumoGeral.totalDespesas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
 - Total GMV: R$ ${insights.resumoGeral.totalGMV.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
 - Total Itens Vendidos: ${insights.resumoGeral.totalItensVendidos}
 - CTR Médio: ${insights.resumoGeral.ctrMedio}%
@@ -467,30 +467,47 @@ Você recebeu dados estruturados de um relatório CSV de anúncios Shopee com as
 - ROAS Geral: ${insights.resumoGeral.roasGeral}
 - CPA Médio: R$ ${insights.resumoGeral.cpaMedio}
 
+**DETALHAMENTO POR ANÚNCIO (USE ESTES VALORES EXATOS):**
+${dadosProcessados.anuncios.map((anuncio, i) => 
+  `${i+1}. ${anuncio.nome}
+     - ID: ${anuncio.idProduto}
+     - Status: ${anuncio.status}
+     - INVESTIMENTO (Despesas): R$ ${anuncio.despesas.toFixed(2)}
+     - GMV (Receita): R$ ${anuncio.gmv.toFixed(2)}
+     - ROAS: ${anuncio.roas}
+     - Cliques: ${anuncio.cliques}
+     - Conversões: ${anuncio.conversoes}
+     - CTR: ${anuncio.ctr}
+     - Impressões: ${anuncio.impressoes}`
+).join('\n\n')}
+
 **TOP 5 ANÚNCIOS POR ROAS:**
 ${insights.topPerformers.top5ROAS.map((anuncio, i) => 
-  `${i+1}. ${anuncio.nome} (ID: ${anuncio.idProduto}) - ROAS: ${anuncio.roas} - GMV: R$ ${anuncio.gmv.toFixed(2)}`
+  `${i+1}. ${anuncio.nome} (ID: ${anuncio.idProduto}) - ROAS: ${anuncio.roas} - GMV: R$ ${anuncio.gmv.toFixed(2)} - Investimento: R$ ${anuncio.despesas.toFixed(2)}`
 ).join('\n')}
 
 **TOP 5 ANÚNCIOS POR GMV:**
 ${insights.topPerformers.top5GMV.map((anuncio, i) => 
-  `${i+1}. ${anuncio.nome} (ID: ${anuncio.idProduto}) - GMV: R$ ${anuncio.gmv.toFixed(2)} - ROAS: ${anuncio.roas}`
+  `${i+1}. ${anuncio.nome} (ID: ${anuncio.idProduto}) - GMV: R$ ${anuncio.gmv.toFixed(2)} - ROAS: ${anuncio.roas} - Investimento: R$ ${anuncio.despesas.toFixed(2)}`
 ).join('\n')}
 
 **ANÚNCIOS COM PROBLEMAS IDENTIFICADOS (${insights.problemasIdentificados.length}):**
 ${insights.problemasIdentificados.map(anuncio => 
-  `- ${anuncio.nome} (ID: ${anuncio.idProduto}) - Status: ${anuncio.status} - ROAS: ${anuncio.roas} - CTR: ${anuncio.ctr} - Conversões: ${anuncio.conversoes}`
+  `- ${anuncio.nome} (ID: ${anuncio.idProduto}) - Status: ${anuncio.status} - ROAS: ${anuncio.roas} - CTR: ${anuncio.ctr} - Conversões: ${anuncio.conversoes} - Investimento: R$ ${anuncio.despesas.toFixed(2)}`
 ).join('\n')}
 
-INSTRUÇÕES:
-1. Analise estes dados estruturados e gere um relatório detalhado
-2. Identifique padrões, oportunidades e problemas
-3. Forneça recomendações estratégicas específicas
-4. Calcule e apresente métricas importantes
-5. Sugira ações práticas para otimização
-6. Use os dados reais fornecidos, nunca invente valores
+🚨 INSTRUÇÕES CRÍTICAS - LEIA COM ATENÇÃO:
+1. Use APENAS os valores fornecidos acima - NUNCA invente dados
+2. INVESTIMENTO = Coluna "Despesas" do CSV (não confundir com GMV)
+3. GMV = Coluna "GMV" do CSV (receita gerada)
+4. ROAS = GMV ÷ Investimento (já calculado corretamente)
+5. NUNCA inverta as colunas ou troque valores
+6. Se um valor parecer inconsistente, mencione no diagnóstico
+7. Use os números exatos conforme mostrados acima
+8. Contagem correta: ${insights.resumoGeral.anunciosAtivos} campanhas ativas, ${insights.resumoGeral.anunciosPausados} pausadas
+9. Total de conversões real: ${insights.resumoGeral.totalConversoes} (não 2.724)
 
-Gere um relatório completo e profissional baseado exclusivamente nestes dados CSV.`;
+Gere um relatório completo e profissional baseado exclusivamente nestes dados CSV estruturados.`;
 
     // Gerar análise com IA usando os dados estruturados
     let markdownFinal = await gerarAnaliseComIA(
@@ -1972,7 +1989,10 @@ function extrairKpisDoTexto(texto) {
   }
   
   return kpis;
-}
+}  
+  //whatsapp-express.js
+const whatsappExpressRouter = require('./whatsapp-express');
+app.use('/api', whatsappExpressRouter);
 
 // Middleware global de tratamento de erros
 app.use((err, req, res, next) => {
