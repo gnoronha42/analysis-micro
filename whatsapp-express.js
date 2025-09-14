@@ -3,6 +3,211 @@ const fetch = require('node-fetch');
 const router = express.Router();
 const { EXPRESS_ACCOUNT_ANALYSIS, WHATSAPP_EXPRESS_PROMPT } = require('./analysis');
 
+// Prompt completo fornecido pelo usuário
+const PROMPT_COMPLETO_E1 = `
+Você é um analista sênior da SellerIA, especialista em Shopee com 8 anos de experiência e responsável por mais de R$ 50 milhões em GMV otimizado.
+
+DADOS RECEBIDOS:
+- Nome: [NOME]
+- Faturamento últimos 30 dias: [VALOR_FATURADO]
+- Visitantes: [VISITANTES]
+- Pedidos: [PEDIDOS]
+- Investimento Shopee Ads: [INVESTIMENTO_ADS]
+- ROAS Mensal: [ROAS]
+- Maior desafio: [DESAFIO]
+
+MISSÃO: Entregar uma análise TÉCNICA e VALIOSA que demonstre expertise, crie urgência através de riscos reais e mostre o potencial de crescimento.
+
+## ESTRUTURA OBRIGATÓRIA:
+
+### 📊 DIAGNÓSTICO TÉCNICO
+Calcule e apresente:
+- Taxa de conversão: (Pedidos ÷ Visitantes × 100)
+- Ticket médio: (Faturamento ÷ Pedidos)
+- Status ROAS vs benchmark 8x
+- Eficiência geral da conta
+
+**FRASE IMPACTO:** "[NOME], analisando seus dados com nossa metodologia de 47 métricas, identifiquei [X] gargalos críticos que estão limitando seu crescimento."
+
+### 💰 POTENCIAL PERDIDO
+Calcule e mostre:
+
+🔴 **Receita perdida por conversão baixa:** R$ [VALOR]/mês
+🔴 **Oportunidade de escala em ads:** R$ [VALOR]/mês  
+🔴 **Potencial de ticket médio:** R$ [VALOR]/mês
+
+**💸 TOTAL PERDIDO: R$ [MIN] a R$ [MAX] por mês**
+
+### ⚠️ RISCOS IMINENTES (Crie urgência)
+Identifique 2-3 riscos específicos e urgentes:
+
+**"[NOME], baseado em +2.000 contas analisadas, vejo riscos críticos:"**
+- "Risco 1: [PROBLEMA ESPECÍFICO] pode custar R$ [VALOR] nos próximos 30 dias"
+- "Risco 2: [TENDÊNCIA NEGATIVA] indica perda de [X]% de market share"
+- "Risco 3: [INEFICIÊNCIA] está queimando R$ [VALOR] por semana"
+
+### 📈 PROJEÇÃO DE CRESCIMENTO
+Mostre o potencial se otimizar:
+
+**"Se implementadas as otimizações identificadas:"**
+- **30 dias:** Faturamento de R$ [ATUAL] para R$ [PROJETADO] (+[X]%)
+- **60 dias:** Conversão de [X]% para [X]% (benchmark do setor)
+- **90 dias:** ROAS otimizado para [X]x com volume [X]% maior
+
+**"ROI das otimizações: Cada R$ 1 investido gera R$ [X] em receita adicional."**
+
+### 🎯 INSIGHTS DE EXPERTISE
+Demonstre conhecimento técnico específico:
+
+**"Baseado na minha experiência com +2000 contas Shopee:"**
+- "Contas com seu perfil ([CARACTERÍSTICA]) têm potencial de crescer [X]x em [TEMPO]"
+- "O padrão [MÉTRICA] vs [MÉTRICA] indica [INSIGHT TÉCNICO]"
+- "Seu [DESAFIO] é comum em [X]% das contas, mas [SOLUÇÃO ESTRATÉGICA]"
+
+### 🔍 LIMITAÇÃO DESTA ANÁLISE
+
+**"Esta análise express revelou apenas 15% do potencial da sua conta."**
+
+**"O que eu NÃO consegui analisar hoje:"**
+• Comportamento semanal das campanhas (qual dia/hora converte mais)
+• Análise produto por produto (quais estão canibalizando vendas)
+• Flutuações do algoritmo (última atualização afetou sua conta?)
+• Oportunidades de otimização em tempo real
+• Benchmarking com contas similares do nosso banco de dados
+
+**"Resultado: Você está tomando decisões estratégicas com dados incompletos."**
+
+### 🎯 SOLUÇÃO: INTELIGÊNCIA ESTRATÉGICA SEMANAL
+
+**"Para contas com seu potencial, recomendo o Plano E1 - Inteligência Estratégica."**
+
+**"O que você receberia TODA SEMANA:"**
+✅ Análise completa de + de 47 métricas da sua loja com nossa IA
+✅ Diagnóstico prático com sugestões aplicáveis  
+✅ Identificação de gargalos e oportunidades em tempo real
+✅ Direcionamento estratégico para melhorar performance
+✅ Relatório mensal de fechamento com visão estratégica
+
+**"Diferença: Dados atualizados semanalmente = decisões precisas = crescimento consistente."**
+
+### 💎 OPORTUNIDADE QUALIFICADA
+
+**"Baseado no potencial da sua conta, você se qualifica para o Plano E1."**
+
+**"Condição especial (próximas 48h):"**
+- Valor normal: R$ 1.297/mês
+- Para você: R$ 497/mês (62% OFF)
+- Ideal para quem já vende e quer tomar decisões com base em dados
+
+**"Acesse: https://consultoriaefeitovendas.com.br/seller-ia/"**
+
+**"⏰ Esta condição para você expira em 48h ou quando atingirmos o limite de vagas."**
+
+---
+
+**TOM:** Técnico, autoritativo, urgente. Mostre que você SABE do que está falando e que há riscos reais em não agir.
+`;
+
+// Template WhatsApp completo
+const TEMPLATE_WHATSAPP_COMPLETO = `
+🔍 *ANÁLISE EXPRESS - [NOME]*
+
+📊 *Diagnóstico Técnico:*
+• Conversão: [CONVERSAO]% (benchmark: 1,2%)
+• Ticket médio: R$ [TICKET_MEDIO]
+• ROAS: [ROAS_CALCULADO]x (benchmark: 8x+)
+• Status geral: [STATUS_GERAL]
+
+💡 *[NOME], analisando seus dados com nossa metodologia de 47 métricas, identifiquei [GARGALOS_COUNT] gargalos críticos que estão limitando seu crescimento.*
+
+---
+
+💰 *Potencial Perdido:*
+
+🔴 *Receita perdida (conversão):* R$ [RECEITA_PERDIDA_CONVERSAO]/mês
+🔴 *Oportunidade de escala em ads:* R$ [OPORTUNIDADE_ADS]/mês  
+🔴 *Potencial de ticket médio:* R$ [POTENCIAL_TICKET]/mês
+
+💸 *TOTAL PERDIDO: R$ [TOTAL_PERDIDO_MIN] a R$ [TOTAL_PERDIDO_MAX] por mês*
+
+---
+
+⚠️ *RISCOS IMINENTES:*
+
+*[NOME], baseado em +2.000 contas analisadas, vejo riscos críticos:*
+
+• *Risco 1:* [RISCO_1]
+• *Risco 2:* [RISCO_2]
+• *Risco 3:* [RISCO_3]
+
+---
+
+📈 *PROJEÇÃO DE CRESCIMENTO:*
+
+*Se implementadas as otimizações identificadas:*
+
+• *30 dias:* Faturamento de R$ [FATURAMENTO_ATUAL] para R$ [FATURAMENTO_30D] (+[CRESCIMENTO_30D]%)
+• *60 dias:* Conversão de [CONVERSAO_ATUAL]% para [CONVERSAO_60D]% (benchmark do setor)
+• *90 dias:* ROAS otimizado para [ROAS_90D]x com volume [VOLUME_90D]% maior
+
+*ROI das otimizações: Cada R$ 1 investido gera R$ [ROI_OTIMIZACAO] em receita adicional.*
+
+---
+
+🎯 *INSIGHTS DE EXPERTISE:*
+
+*Baseado na minha experiência com +2000 contas Shopee:*
+
+• *Contas com seu perfil têm potencial de crescer [CRESCIMENTO_PERFIL]x em [TEMPO_CRESCIMENTO]*
+• *O padrão [PADRAO_IDENTIFICADO] indica [INSIGHT_TECNICO]*
+• *Seu [DESAFIO] é comum, mas [SOLUCAO_ESTRATEGICA]*
+
+---
+
+🔍 *LIMITAÇÃO DESTA ANÁLISE:*
+
+*Esta análise express revelou apenas 15% do potencial da sua conta.*
+
+*O que eu NÃO consegui analisar hoje:*
+• Comportamento semanal das campanhas
+• Análise produto por produto  
+• Flutuações do algoritmo da Shopee
+• Oportunidades de otimização em tempo real
+• Benchmarking com contas similares
+
+*Resultado: Você está tomando decisões estratégicas com dados incompletos.*
+
+---
+
+🎯 *SOLUÇÃO: INTELIGÊNCIA ESTRATÉGICA SEMANAL*
+
+*Para contas com seu potencial, recomendo o Plano E1 - Inteligência Estratégica.*
+
+*O que você receberia TODA SEMANA:*
+✅ Análise completa de + de 47 métricas da sua loja com nossa IA
+✅ Diagnóstico prático com sugestões aplicáveis  
+✅ Identificação de gargalos e oportunidades em tempo real
+✅ Direcionamento estratégico para melhorar performance
+✅ Relatório mensal de fechamento com visão estratégica
+
+*Diferença: Dados atualizados semanalmente = decisões precisas = crescimento consistente.*
+
+---
+
+💎 *OPORTUNIDADE QUALIFICADA:*
+
+*Baseado no potencial da sua conta, você se qualifica para o Plano E1.*
+
+*Condição especial (próximas 48h):*
+• Valor normal: R$ 1.297/mês
+• Para você: R$ 497/mês (62% OFF)
+• Ideal para quem já vende e quer tomar decisões com base em dados
+
+*Acesse: https://consultoriaefeitovendas.com.br/seller-ia/*
+
+⏰ *Esta condição expira em 48h ou quando atingirmos o limite de vagas.*
+`;
+
 // Função para processar dados e substituir placeholders
 function processarDadosParaPrompt(dados) {
   console.log('📊 Processando dados para o prompt:', JSON.stringify(dados, null, 2));
@@ -134,25 +339,15 @@ async function gerarMensagemExpressOpenAI(dados) {
   // Processar dados e substituir placeholders
   const dadosProcessados = processarDadosParaPrompt(dados);
   
-  // Substituir placeholders no prompt
-  let promptFinal = WHATSAPP_EXPRESS_PROMPT
-    .replace(/\{\{nome\}\}/g, dadosProcessados.nome)
-    .replace(/\{\{faturamento_30d\}\}/g, dadosProcessados.faturamento_30d)
-    .replace(/\{\{visitantes\}\}/g, dadosProcessados.visitantes)
-    .replace(/\{\{pedidos\}\}/g, dadosProcessados.pedidos)
-    .replace(/\{\{invest_ads_mensal\}\}/g, dadosProcessados.invest_ads_mensal)
-    .replace(/\{\{roas_mensal\}\}/g, dadosProcessados.roas_mensal)
-    .replace(/\{\{maior_desafio\}\}/g, dadosProcessados.maior_desafio)
-    .replace(/\{\{Conversao\}\}/g, dadosProcessados.conversao)
-    .replace(/\{\{Ticket_Medio\}\}/g, dadosProcessados.ticket_medio)
-    .replace(/\{\{CPA_Geral\}\}/g, dadosProcessados.cpa_geral)
-    .replace(/\{\{ROAS_Calculado\}\}/g, dadosProcessados.roas_calculado)
-    .replace(/\{\{Score_Gargalo\}\}/g, dadosProcessados.score_gargalo)
-    .replace(/\{\{Dinheiro_na_Mesa\}\}/g, dadosProcessados.dinheiro_na_mesa)
-    .replace(/\{\{Gargalo\}\}/g, dadosProcessados.gargalo)
-    .replace(/\{\{Selo_ROAS\}\}/g, dadosProcessados.selo_roas)
-    .replace(/\{\{Selo_Conversao\}\}/g, dadosProcessados.selo_conversao)
-    .replace(/\{\{Selo_Trafego\}\}/g, dadosProcessados.selo_trafego);
+  // Substituir placeholders no prompt completo E1
+  let promptFinal = PROMPT_COMPLETO_E1
+    .replace(/\[NOME\]/g, dadosProcessados.nome)
+    .replace(/\[VALOR_FATURADO\]/g, `R$ ${dadosProcessados.faturamento_30d}`)
+    .replace(/\[VISITANTES\]/g, dadosProcessados.visitantes)
+    .replace(/\[PEDIDOS\]/g, dadosProcessados.pedidos)
+    .replace(/\[INVESTIMENTO_ADS\]/g, `R$ ${dadosProcessados.invest_ads_mensal}`)
+    .replace(/\[ROAS\]/g, dadosProcessados.roas_mensal)
+    .replace(/\[DESAFIO\]/g, dadosProcessados.maior_desafio);
 
   console.log('📝 Prompt final preparado (primeiros 500 chars):', promptFinal.substring(0, 500));
 
@@ -212,89 +407,91 @@ function formatarNumeroTelefone(numero) {
 
 // Função para formatar mensagem bonita para WhatsApp baseada na análise da IA
 function formatarMensagemWhatsAppComAnalise(dadosProcessados, analiseIA) {
-  // Extrair informações específicas da análise da IA se possível
-  let gargaloIA = dadosProcessados.gargalo;
-  let dinheiroMesaIA = dadosProcessados.dinheiro_na_mesa;
+  console.log('📝 Formatando mensagem WhatsApp com template completo...');
   
-  // Tentar extrair informações mais específicas da análise da IA
-  if (analiseIA && analiseIA.includes('Gargalo Principal')) {
-    const gargaloMatch = analiseIA.match(/Gargalo Principal[:\s]*([^•\n]+)/i);
-    if (gargaloMatch && gargaloMatch[1]) {
-      gargaloIA = gargaloMatch[1].trim().replace(/[•\-]/g, '').trim();
+  // Extrair informações da análise da IA
+  let gargalosCount = '3';
+  let statusGeral = 'POTENCIAL DE CRESCIMENTO IDENTIFICADO';
+  let receitaPerdidaConversao = '0';
+  let oportunidadeAds = '0';
+  let potencialTicket = '0';
+  let totalPerdidoMin = '0';
+  let totalPerdidoMax = '0';
+  let risco1 = 'Conversão abaixo do benchmark pode impactar resultados';
+  let risco2 = 'Oportunidades de otimização não exploradas';
+  let risco3 = 'Concorrência pode ganhar market share';
+  let crescimento30d = '25';
+  let conversao60d = '2,0';
+  let roas90d = '10';
+  let volume90d = '30';
+  let roiOtimizacao = '3,5';
+  let crescimentoPerfil = '2-3';
+  let tempoCrescimento = '90 dias';
+  let padraoIdentificado = `ROAS ${dadosProcessados.roas_calculado}x + Conversão ${dadosProcessados.conversao}%`;
+  let insightTecnico = 'potencial de otimização significativo';
+  let solucaoEstrategica = 'foco em conversão e eficiência de ads';
+
+  // Tentar extrair dados específicos da análise da IA
+  if (analiseIA) {
+    // Extrair potencial perdido
+    const receitaMatch = analiseIA.match(/Receita perdida.*?R\$\s*([\d.,]+)/i);
+    if (receitaMatch) receitaPerdidaConversao = receitaMatch[1];
+    
+    const oportunidadeMatch = analiseIA.match(/Oportunidade de escala.*?R\$\s*([\d.,]+)/i);
+    if (oportunidadeMatch) oportunidadeAds = oportunidadeMatch[1];
+    
+    const ticketMatch = analiseIA.match(/Potencial de ticket.*?R\$\s*([\d.,]+)/i);
+    if (ticketMatch) potencialTicket = ticketMatch[1];
+    
+    const totalMatch = analiseIA.match(/TOTAL PERDIDO.*?R\$\s*([\d.,]+).*?R\$\s*([\d.,]+)/i);
+    if (totalMatch) {
+      totalPerdidoMin = totalMatch[1];
+      totalPerdidoMax = totalMatch[2];
     }
+    
+    // Extrair riscos
+    const risco1Match = analiseIA.match(/Risco 1:([^•\n]+)/i);
+    if (risco1Match) risco1 = risco1Match[1].trim();
+    
+    const risco2Match = analiseIA.match(/Risco 2:([^•\n]+)/i);
+    if (risco2Match) risco2 = risco2Match[1].trim();
+    
+    const risco3Match = analiseIA.match(/Risco 3:([^•\n]+)/i);
+    if (risco3Match) risco3 = risco3Match[1].trim();
   }
-  
-  if (analiseIA && analiseIA.includes('Dinheiro na Mesa')) {
-    const dinheiroMatch = analiseIA.match(/R\$\s*([\d.,]+)/);
-    if (dinheiroMatch && dinheiroMatch[1]) {
-      dinheiroMesaIA = dinheiroMatch[1];
-    }
-  }
 
-  const mensagem = `
-🚀 *ANÁLISE EXPRESS EFEITO VENDAS* 🚀
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Usar o template completo com substituições
+  let mensagem = TEMPLATE_WHATSAPP_COMPLETO
+    .replace(/\[NOME\]/g, dadosProcessados.nome)
+    .replace(/\[CONVERSAO\]/g, dadosProcessados.conversao)
+    .replace(/\[TICKET_MEDIO\]/g, dadosProcessados.ticket_medio)
+    .replace(/\[ROAS_CALCULADO\]/g, dadosProcessados.roas_calculado)
+    .replace(/\[STATUS_GERAL\]/g, statusGeral)
+    .replace(/\[GARGALOS_COUNT\]/g, gargalosCount)
+    .replace(/\[RECEITA_PERDIDA_CONVERSAO\]/g, receitaPerdidaConversao)
+    .replace(/\[OPORTUNIDADE_ADS\]/g, oportunidadeAds)
+    .replace(/\[POTENCIAL_TICKET\]/g, potencialTicket)
+    .replace(/\[TOTAL_PERDIDO_MIN\]/g, totalPerdidoMin)
+    .replace(/\[TOTAL_PERDIDO_MAX\]/g, totalPerdidoMax)
+    .replace(/\[RISCO_1\]/g, risco1)
+    .replace(/\[RISCO_2\]/g, risco2)
+    .replace(/\[RISCO_3\]/g, risco3)
+    .replace(/\[FATURAMENTO_ATUAL\]/g, dadosProcessados.faturamento_30d)
+    .replace(/\[FATURAMENTO_30D\]/g, dadosProcessados.gmv_realista)
+    .replace(/\[CRESCIMENTO_30D\]/g, crescimento30d)
+    .replace(/\[CONVERSAO_ATUAL\]/g, dadosProcessados.conversao)
+    .replace(/\[CONVERSAO_60D\]/g, conversao60d)
+    .replace(/\[ROAS_90D\]/g, roas90d)
+    .replace(/\[VOLUME_90D\]/g, volume90d)
+    .replace(/\[ROI_OTIMIZACAO\]/g, roiOtimizacao)
+    .replace(/\[CRESCIMENTO_PERFIL\]/g, crescimentoPerfil)
+    .replace(/\[TEMPO_CRESCIMENTO\]/g, tempoCrescimento)
+    .replace(/\[PADRAO_IDENTIFICADO\]/g, padraoIdentificado)
+    .replace(/\[INSIGHT_TECNICO\]/g, insightTecnico)
+    .replace(/\[DESAFIO\]/g, dadosProcessados.maior_desafio)
+    .replace(/\[SOLUCAO_ESTRATEGICA\]/g, solucaoEstrategica);
 
-👋 Olá *${dadosProcessados.nome}*!
-
-Sua análise personalizada está pronta! 📊
-
-📈 *VISÃO GERAL (30 DIAS)*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 *Faturamento:* R$ ${dadosProcessados.faturamento_30d}
-📦 *Pedidos:* ${dadosProcessados.pedidos}
-👥 *Visitantes:* ${dadosProcessados.visitantes}
-💸 *Investimento Ads:* R$ ${dadosProcessados.invest_ads_mensal}
-
-🎯 *MÉTRICAS PRINCIPAIS*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 *ROAS Informado:* ${dadosProcessados.roas_mensal}x
-📈 *ROAS Calculado:* ${dadosProcessados.roas_calculado}x [${dadosProcessados.selo_roas}]
-🔄 *Taxa Conversão:* ${dadosProcessados.conversao}% [${dadosProcessados.selo_conversao}]
-💵 *Ticket Médio:* R$ ${dadosProcessados.ticket_medio}
-🎯 *CPA:* R$ ${dadosProcessados.cpa_geral}
-⚡ *Score Gargalo:* ${dadosProcessados.score_gargalo}/100
-
-🔍 *DIAGNÓSTICO PRINCIPAL*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚨 *Gargalo Identificado:* ${gargaloIA}
-🎯 *Relacionado ao seu desafio:* "${dadosProcessados.maior_desafio}"
-
-💎 *DINHEIRO NA MESA*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 Você pode estar deixando de capturar:
-*R$ ${dinheiroMesaIA}* este mês! 🤯
-
-📊 *PROJEÇÕES 30 DIAS*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🟢 *Conservador:* ${dadosProcessados.pedidos} pedidos | R$ ${dadosProcessados.faturamento_30d}
-🟡 *Realista:* ${dadosProcessados.pedidos_realista} pedidos (+${dadosProcessados.delta_pedidos_realista}) | R$ ${dadosProcessados.gmv_realista}
-🟠 *Otimista:* ${dadosProcessados.pedidos_otimista} pedidos (+${dadosProcessados.delta_pedidos_otimista}) | R$ ${dadosProcessados.gmv_otimista}
-
-🔒 *O QUE VOCÊ NÃO ESTÁ VENDO*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔐 Top 5 SKUs por potencial (CTR, CPC, ROAS)
-🔐 Mapa de Funil por SKU detalhado
-🔐 Projeções semanais & metas por campanha
-🔐 Priorização de verba automática
-
-⚡ *POR QUE ASSINAR AGORA?*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Dossiê prático, pronto para decisão
-✅ Atualizado todo mês automaticamente
-✅ Foco em margem e escalabilidade
-✅ Se já está na meta, próximo passo é *ESCALA COM CONTROLE*
-
-🎯 *PRÓXIMOS PASSOS*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔥 *Assinar Relatório Completo Efeito Vendas*
-📊 *Ver Amostra de 1 SKU*
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💬 *Responda esta mensagem para saber mais!*
-🚀 *EFEITO VENDAS - Especialistas em Shopee*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-
+  console.log('✅ Mensagem WhatsApp formatada com template completo');
   return mensagem.trim();
 }
 
@@ -339,7 +536,7 @@ async function enviarMensagemParaWhatsapp(numero, mensagem, nome = '') {
   const last_name = rest.join(' ') || 'Cliente';
 
   try {
-    // 1. Cadastrar subscriber
+  // 1. Cadastrar subscriber
     console.log('👤 Cadastrando subscriber...');
     
     const subscriberPayload = {
@@ -408,14 +605,14 @@ async function enviarMensagemParaWhatsapp(numero, mensagem, nome = '') {
       body: JSON.stringify(messagePayload)
     });
 
-    if (!messageRes.ok) {
-      const errorText = await messageRes.text();
+  if (!messageRes.ok) {
+    const errorText = await messageRes.text();
       console.error('❌ Erro ao enviar mensagem:', errorText);
       console.error('❌ Status:', messageRes.status);
       console.error('❌ Headers:', Object.fromEntries(messageRes.headers.entries()));
       throw new Error(`Erro ao enviar mensagem: ${errorText}`);
-    }
-    
+  }
+  
     const messageData = await messageRes.json();
     console.log('✅ Mensagem enviada com sucesso!');
     console.log('✅ Resposta da API:', JSON.stringify(messageData, null, 2));
@@ -439,7 +636,7 @@ router.post('/whatsapp-express', async (req, res) => {
       console.log('❌ Telefone não fornecido');
       return res.status(400).json({ error: "Telefone é obrigatório para envio ao WhatsApp." });
     }
-
+    
     if (!nome || !faturamento30d || !visitantes || !pedidos || !investimentoAds || !roasMensal || !desafio) {
       console.log('❌ Dados obrigatórios faltando');
       return res.status(400).json({ error: "Todos os campos são obrigatórios: nome, faturamento30d, visitantes, pedidos, investimentoAds, roasMensal, desafio." });
