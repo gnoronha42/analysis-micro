@@ -294,27 +294,52 @@ function truncarMensagem(mensagem, maxLength = 4000) {
   return truncated + '\n\n...\n\n📞 *Continue a conversa conosco para receber a análise completa!*\n🚀 *EFEITO VENDAS*';
 }
 
-function formatarMarkdownParaWhatsApp(texto) {
+function formatarMarkdownParaWhatsApp(texto, ctx = {}) {
   if (!texto || typeof texto !== 'string') return '';
-  let t = texto;
-  // Converter cabeçalhos
-  t = t.replace(/^###\s+(.*)$/gm, '🔷 $1');
-  t = t.replace(/^##\s+(.*)$/gm, '🔶 $1');
-  t = t.replace(/^#\s+(.*)$/gm, '🔶 $1');
-  // Separadores
-  t = t.replace(/^---+$/gm, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  // Negrito markdown para negrito WhatsApp
-  t = t.replace(/\*\*(.*?)\*\*/g, '*$1*');
-  // Bullets
-  t = t.replace(/^\s*[-•]\s+/gm, '• ');
-  // Remover crases inline
-  t = t.replace(/`([^`]+)`/g, '$1');
-  // Normalizar quebras de linha múltiplas
+  let t = texto.replace(/\r\n/g, '\n');
+
+  // Limpeza básica de markdown
+  t = t.replace(/\*\*(.*?)\*\*/g, '*$1*'); // **bold** -> *bold*
+  t = t.replace(/`([^`]+)`/g, '$1'); // remover crases
+  t = t.replace(/^---+$/gm, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━'); // separadores
+  t = t.replace(/^\s*[-•]\s+/gm, '• '); // bullets
+
+  // Cabeçalhos com mapeamento de emojis e separadores
+  const headerMap = (titleRaw) => {
+    const title = titleRaw.trim().toUpperCase();
+    if (title.includes('DIAGNÓSTICO')) return `🩺 DIAGNÓSTICO SIMPLES E VISUAL\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    if (title.includes('IMPACTO')) return `💸 IMPACTO FINANCEIRO TRADUZIDO\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    if (title.includes('RISCOS')) return `⚠️ RISCOS REAIS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    if (title.includes('PROJEÇÃO')) return `📈 PROJEÇÃO MOTIVADORA\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    if (title.includes('CALL TO ACTION') || title.includes('CALL TO ACTION IMPACTANTE')) return `🎯 CALL TO ACTION IMPACTANTE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    return `🔷 ${titleRaw.trim()}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  };
+  t = t.replace(/^###\s+(.*)$/gmi, (_, g1) => headerMap(g1));
+  t = t.replace(/^##\s+(.*)$/gmi, (_, g1) => headerMap(g1));
+  t = t.replace(/^#\s+(.*)$/gmi, (_, g1) => headerMap(g1));
+
+  // Emojis para métricas principais
+  t = t.replace(/^\s*CONVERSÃO\s*:/gmi, '📊 Conversão:');
+  t = t.replace(/^\s*TICKET\s*M[ÉE]DIO\s*:/gmi, '💵 Ticket médio:');
+  t = t.replace(/^\s*ROAS\s*:/gmi, '🚀 ROAS:');
+
+  // Emojis para perdas/impactos
+  t = t.replace(/^\s*PERDA\s+POR\s+CONVERS[ÃA]O\s+BAIXA\s*:/gmi, '⚠️ Perda por conversão baixa:');
+  t = t.replace(/^\s*PERDA\s+POR\s+TICKET\s+M[ÉE]DIO\s+BAIXO\s*:/gmi, '⚠️ Perda por ticket médio baixo:');
+  t = t.replace(/^\s*PERDA\s+POR\s+FALTA\s+DE\s+ESCALA\s+EM\s+ADS\s*:/gmi, '⚠️ Perda por falta de escala em Ads:');
+  t = t.replace(/^\s*SOMA\s+FINAL\s*:/gmi, '💰 Total em jogo:');
+
+  // Frases entre aspas -> itálico
+  t = t.replace(/(^|\n)\s*"([^"]+)"\s*(?=\n|$)/g, (_, p1, p2) => `${p1}_${p2}_`);
+
+  // Normalizações
+  t = t.replace(/[\t ]{2,}/g, ' ');
   t = t.replace(/\n{3,}/g, '\n\n');
-  // Trim
   t = t.trim();
-  // Adicionar cabeçalho padrão
-  const header = '🚀 *ANÁLISE EXPRESS EFEITO VENDAS*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+
+  // Cabeçalho personalizado
+  const nome = ctx.nome ? `\n👤 ${ctx.nome}` : '';
+  const header = `🚀 *EFEITO VENDAS – Análise Express*${nome}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
   return `${header}${t}`;
 }
 
@@ -462,7 +487,7 @@ router.post('/whatsapp-express', async (req, res) => {
     console.log('🤖 Análise da IA gerada (primeiros 300 chars):', analiseIA.substring(0, 300));
     
     // Formatar markdown para estilo WhatsApp
-    const analise = formatarMarkdownParaWhatsApp(analiseIA);
+    const analise = formatarMarkdownParaWhatsApp(analiseIA, { nome });
     console.log('📝 Mensagem final (primeiros 300 chars):', analise.substring(0, 300));
     
     // Envia a mensagem de texto para o WhatsApp
