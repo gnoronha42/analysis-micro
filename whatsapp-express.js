@@ -1,7 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const router = express.Router();
-const { EXPRESS_ACCOUNT_ANALYSIS, WHATSAPP_EXPRESS_PROMPT } = require('./analysis');
+const { WHATSAPP_EXPRESS_PROMPT } = require('./analysis');
 
 // Função para processar dados e substituir placeholders
 function processarDadosParaPrompt(dados) {
@@ -134,25 +134,10 @@ async function gerarMensagemExpressOpenAI(dados) {
   // Processar dados e substituir placeholders
   const dadosProcessados = processarDadosParaPrompt(dados);
   
-  // Substituir placeholders no prompt
-  let promptFinal = WHATSAPP_EXPRESS_PROMPT
-    .replace(/\{\{nome\}\}/g, dadosProcessados.nome)
-    .replace(/\{\{faturamento_30d\}\}/g, dadosProcessados.faturamento_30d)
-    .replace(/\{\{visitantes\}\}/g, dadosProcessados.visitantes)
-    .replace(/\{\{pedidos\}\}/g, dadosProcessados.pedidos)
-    .replace(/\{\{invest_ads_mensal\}\}/g, dadosProcessados.invest_ads_mensal)
-    .replace(/\{\{roas_mensal\}\}/g, dadosProcessados.roas_mensal)
-    .replace(/\{\{maior_desafio\}\}/g, dadosProcessados.maior_desafio)
-    .replace(/\{\{Conversao\}\}/g, dadosProcessados.conversao)
-    .replace(/\{\{Ticket_Medio\}\}/g, dadosProcessados.ticket_medio)
-    .replace(/\{\{CPA_Geral\}\}/g, dadosProcessados.cpa_geral)
-    .replace(/\{\{ROAS_Calculado\}\}/g, dadosProcessados.roas_calculado)
-    .replace(/\{\{Score_Gargalo\}\}/g, dadosProcessados.score_gargalo)
-    .replace(/\{\{Dinheiro_na_Mesa\}\}/g, dadosProcessados.dinheiro_na_mesa)
-    .replace(/\{\{Gargalo\}\}/g, dadosProcessados.gargalo)
-    .replace(/\{\{Selo_ROAS\}\}/g, dadosProcessados.selo_roas)
-    .replace(/\{\{Selo_Conversao\}\}/g, dadosProcessados.selo_conversao)
-    .replace(/\{\{Selo_Trafego\}\}/g, dadosProcessados.selo_trafego);
+  // Anexar dados reais ao prompt para a IA usar exatamente estes valores
+  const dadosReaisBloco = `DADOS RECEBIDOS (VALORES REAIS):\n- Nome: ${dadosProcessados.nome}\n- Faturamento últimos 30 dias: R$ ${dadosProcessados.faturamento_30d}\n- Visitantes: ${dadosProcessados.visitantes}\n- Pedidos: ${dadosProcessados.pedidos}\n- Investimento Shopee Ads: R$ ${dadosProcessados.invest_ads_mensal}\n- ROAS Mensal: ${dadosProcessados.roas_mensal}\n- Maior desafio: ${dadosProcessados.maior_desafio}`;
+
+  const promptFinal = `${WHATSAPP_EXPRESS_PROMPT}\n\n${dadosReaisBloco}`;
 
   console.log('📝 Prompt final preparado (primeiros 500 chars):', promptFinal.substring(0, 500));
 
@@ -309,6 +294,30 @@ function truncarMensagem(mensagem, maxLength = 4000) {
   return truncated + '\n\n...\n\n📞 *Continue a conversa conosco para receber a análise completa!*\n🚀 *EFEITO VENDAS*';
 }
 
+function formatarMarkdownParaWhatsApp(texto) {
+  if (!texto || typeof texto !== 'string') return '';
+  let t = texto;
+  // Converter cabeçalhos
+  t = t.replace(/^###\s+(.*)$/gm, '🔷 $1');
+  t = t.replace(/^##\s+(.*)$/gm, '🔶 $1');
+  t = t.replace(/^#\s+(.*)$/gm, '🔶 $1');
+  // Separadores
+  t = t.replace(/^---+$/gm, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  // Negrito markdown para negrito WhatsApp
+  t = t.replace(/\*\*(.*?)\*\*/g, '*$1*');
+  // Bullets
+  t = t.replace(/^\s*[-•]\s+/gm, '• ');
+  // Remover crases inline
+  t = t.replace(/`([^`]+)`/g, '$1');
+  // Normalizar quebras de linha múltiplas
+  t = t.replace(/\n{3,}/g, '\n\n');
+  // Trim
+  t = t.trim();
+  // Adicionar cabeçalho padrão
+  const header = '🚀 *ANÁLISE EXPRESS EFEITO VENDAS*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  return `${header}${t}`;
+}
+
 // Função para enviar mensagem de texto via BotConversa
 async function enviarMensagemParaWhatsapp(numero, mensagem, nome = '') {
   console.log('📱 Iniciando envio de mensagem para WhatsApp...');
@@ -452,13 +461,9 @@ router.post('/whatsapp-express', async (req, res) => {
     
     console.log('🤖 Análise da IA gerada (primeiros 300 chars):', analiseIA.substring(0, 300));
     
-    // Processar dados para formatação bonita do WhatsApp
-    const dadosProcessados = processarDadosParaPrompt({ nome, email, faturamento30d, visitantes, pedidos, investimentoAds, roasMensal, desafio });
-    
-    // Formatar mensagem bonita para WhatsApp baseada na análise da IA
-    const analise = formatarMensagemWhatsAppComAnalise(dadosProcessados, analiseIA);
-    
-    console.log('📝 Mensagem final formatada (primeiros 300 chars):', analise.substring(0, 300));
+    // Formatar markdown para estilo WhatsApp
+    const analise = formatarMarkdownParaWhatsApp(analiseIA);
+    console.log('📝 Mensagem final (primeiros 300 chars):', analise.substring(0, 300));
     
     // Envia a mensagem de texto para o WhatsApp
     const resultado = await enviarMensagemParaWhatsapp(telefone, analise, nome);
