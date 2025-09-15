@@ -1,16 +1,16 @@
 // Função para processar CSV de anúncios
 function processarCSVAnuncios(csvContent) {
-  console.log('📊 Iniciando processamento de CSV de anúncios...');
-  
   try {
+    console.log('📊 Iniciando processamento de CSV de anúncios...');
     const linhas = csvContent.split('\n');
-    const dadosLoja = {};
     const anuncios = [];
+    let dadosLoja = {};
+    let mapeamentoColunas = {};
     
-    // Processar metadados da loja (primeiras linhas)
     for (let i = 0; i < linhas.length; i++) {
       const linha = linhas[i].trim();
       
+      // Extrair dados da loja
       if (linha.includes('Nome de Usuário,')) {
         dadosLoja.nomeUsuario = linha.split(',')[1];
       } else if (linha.includes('Nome da loja,')) {
@@ -21,48 +21,89 @@ function processarCSVAnuncios(csvContent) {
         dadosLoja.dataRelatorio = linha.split(',')[1];
       } else if (linha.includes('Período,')) {
         dadosLoja.periodo = linha.split(',')[1];
-      } else if (linha.startsWith('#,Nome do Anúncio,')) {
-        // Cabeçalho encontrado, processar anúncios a partir da próxima linha
-        for (let j = i + 1; j < linhas.length; j++) {
-          const linhaAnuncio = linhas[j].trim();
-          if (linhaAnuncio && !linhaAnuncio.startsWith(',')) {
-            // Melhor tratamento de CSV com aspas
+      }
+      
+      // Identificar cabeçalho e criar mapeamento dinâmico
+      if (linha.startsWith('#,Nome do Anúncio')) {
+        const cabecalhos = linha.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || linha.split(',');
+        cabecalhos.forEach((cabecalho, index) => {
+          const nome = cabecalho.replace(/"/g, '').trim();
+          mapeamentoColunas[nome] = index;
+        });
+        console.log('📋 Mapeamento de colunas criado:', mapeamentoColunas);
+        continue;
+      }
+      
+      // Processar linhas de anúncios
+      if (linha.match(/^\d+,/)) {
+        try {
+          const linhaAnuncio = linha;
+          if (linhaAnuncio && linhaAnuncio.trim() !== '') {
             const dados = linhaAnuncio.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || linhaAnuncio.split(',');
             if (dados.length >= 24) { // Verificar se tem dados suficientes
+              // Usar mapeamento dinâmico para extrair valores
+              const impressoes = parseInt(dados[mapeamentoColunas['Impressões']]?.replace(/[^\d]/g, '')) || 0;
+              const cliques = parseInt(dados[mapeamentoColunas['Cliques']]?.replace(/[^\d]/g, '')) || 0;
+              const conversoes = parseInt(dados[mapeamentoColunas['Conversões']]?.replace(/[^\d]/g, '')) || 0;
+              const conversoesDiretas = parseInt(dados[mapeamentoColunas['Conversões Diretas']]?.replace(/[^\d]/g, '')) || 0;
+              const itensVendidos = parseInt(dados[mapeamentoColunas['Itens Vendidos']]?.replace(/[^\d]/g, '')) || 0;
+              const itensVendidosDiretos = parseInt(dados[mapeamentoColunas['Itens Vendidos Diretos']]?.replace(/[^\d]/g, '')) || 0;
+              
+              // Processar valores monetários
+              const gmv = parseFloat(dados[mapeamentoColunas['GMV']]?.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+              const receitaDireta = parseFloat(dados[mapeamentoColunas['Receita direta']]?.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+              const despesas = parseFloat(dados[mapeamentoColunas['Despesas']]?.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+              
+              // Processar ROAS (pode vir como decimal)
+              const roas = parseFloat(dados[mapeamentoColunas['ROAS']]?.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+              const roasDireto = parseFloat(dados[mapeamentoColunas['ROAS Direto']]?.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+              
+              // Processar percentuais (CTR, taxas de conversão)
+              const ctr = dados[mapeamentoColunas['CTR']]?.replace('%', '') || '0';
+              const taxaConversao = dados[mapeamentoColunas['Taxa de Conversão']]?.replace('%', '') || '0';
+              const taxaConversaoDireta = dados[mapeamentoColunas['Taxa de Conversão Direta']]?.replace('%', '') || '0';
+              
+              console.log(`📊 Processando ${dados[1]}: Despesas=${despesas}, GMV=${gmv}, ROAS=${roas}, Conversões=${conversoes}`);
+              
               anuncios.push({
-                numero: dados[0],
-                nome: dados[1]?.replace(/"/g, ''),
-                status: dados[2],
-                tipo: dados[3],
-                idProduto: dados[4],
-                criativo: dados[5],
-                metodoLance: dados[6],
-                posicionamento: dados[7],
-                dataInicio: dados[8],
-                dataFim: dados[9],
-                impressoes: parseInt(dados[10]) || 0,
-                cliques: parseInt(dados[11]) || 0,
-                ctr: dados[12],
-                conversoes: parseInt(dados[13]) || 0,
-                conversoesDiretas: parseInt(dados[14]) || 0,
-                taxaConversao: dados[15],
-                taxaConversaoDireta: dados[16],
-                custoPorConversao: parseFloat(dados[17]) || 0,
-                custoPorConversaoDireta: parseFloat(dados[18]) || 0,
-                itensVendidos: parseInt(dados[19]) || 0,
-                itensVendidosDiretos: parseInt(dados[20]) || 0,
-                gmv: parseFloat(dados[21]) || 0,
-                receitaDireta: parseFloat(dados[22]) || 0,
-                despesas: parseFloat(dados[23]) || 0,
-                roas: parseFloat(dados[24]) || 0,
-                roasDireto: parseFloat(dados[25]) || 0,
-                acos: dados[26],
-                acosDireto: dados[27]
+                numero: dados[mapeamentoColunas['#']],
+                nome: dados[mapeamentoColunas['Nome do Anúncio']]?.replace(/"/g, ''),
+                status: dados[mapeamentoColunas['Status']],
+                tipo: dados[mapeamentoColunas['Tipos de Anúncios']],
+                idProduto: dados[mapeamentoColunas['ID do produto']],
+                segmentacaoPublico: dados[mapeamentoColunas['Segmentação de Público']],
+                criativo: dados[mapeamentoColunas['Criativo']],
+                metodoLance: dados[mapeamentoColunas['Método de Lance']],
+                posicionamento: dados[mapeamentoColunas['Posicionamento']],
+                dataInicio: dados[mapeamentoColunas['Data de Início']],
+                dataFim: dados[mapeamentoColunas['Data de Encerramento']],
+                impressoes,
+                cliques,
+                ctr,
+                conversoes,
+                conversoesDiretas,
+                taxaConversao,
+                taxaConversaoDireta,
+                custoPorConversao: parseFloat(dados[mapeamentoColunas['Custo por Conversão']]?.replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+                custoPorConversaoDireta: parseFloat(dados[mapeamentoColunas['Custo por Conversão Direta']]?.replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+                itensVendidos,
+                itensVendidosDiretos,
+                gmv,
+                receitaDireta,
+                despesas,
+                roas,
+                roasDireto,
+                acos: dados[mapeamentoColunas['ACOS']],
+                acosDireto: dados[mapeamentoColunas['ACOS Direto']],
+                impressoesProduto: parseInt(dados[mapeamentoColunas['Impressões do Produto']]) || 0,
+                cliquesProdutos: parseInt(dados[mapeamentoColunas['Cliques de Produtos']]) || 0,
+                ctrProduto: dados[mapeamentoColunas['CTR do Produto']]
               });
             }
           }
+        } catch (error) {
+          console.error('❌ Erro ao processar linha do anúncio:', error);
         }
-        break;
       }
     }
     
@@ -92,7 +133,7 @@ function gerarInsightsCSV(dadosProcessados) {
   const totalGMV = anuncios.reduce((acc, a) => acc + a.gmv, 0);
   const totalItensVendidos = anuncios.reduce((acc, a) => acc + a.itensVendidos, 0);
   
-  const ctrMedio = totalCliques > 0 ? ((totalCliques / totalImpressoes) * 100).toFixed(2) : '0.00';
+  const ctrMedio = totalImpressoes > 0 ? ((totalCliques / totalImpressoes) * 100).toFixed(2) : '0.00';
   const taxaConversaoMedia = totalCliques > 0 ? ((totalConversoes / totalCliques) * 100).toFixed(2) : '0.00';
   const roasGeral = totalDespesas > 0 ? (totalGMV / totalDespesas).toFixed(2) : '0.00';
   const cpaMedio = totalConversoes > 0 ? (totalDespesas / totalConversoes).toFixed(2) : '0.00';

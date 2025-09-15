@@ -442,7 +442,12 @@ app.post('/analise-csv', async (req, res) => {
 
 🚨 ANÁLISE BASEADA EM DADOS CSV ESTRUTURADOS - SHOPEE ADS 🚨
 
-ATENÇÃO: Você está analisando dados ESTRUTURADOS de CSV. Use APENAS os valores fornecidos abaixo.
+⚠️ INSTRUÇÕES CRÍTICAS - LEIA PRIMEIRO:
+1. **NUNCA INVERTA OS VALORES**: Despesas = Investimento | GMV = Receita
+2. **VALIDAÇÃO OBRIGATÓRIA**: Se ROAS > 50x, há erro de interpretação
+3. **INTERPRETAÇÃO CORRETA**: ROAS = GMV ÷ Despesas (use valores corretos)
+4. **EXEMPLO REAL**: Despesas R$ 1.543,25 + GMV R$ 11.001,02 = ROAS 7,13x (CORRETO)
+5. **JAMAIS DIGA**: "ROAS 1.543,25x" (isso seria impossível - é o valor das despesas!)
 
 **DADOS DA LOJA:**
 - Nome da Loja: ${insights.dadosLoja.nomeLoja}
@@ -451,63 +456,47 @@ ATENÇÃO: Você está analisando dados ESTRUTURADOS de CSV. Use APENAS os valor
 - Período do Relatório: ${insights.dadosLoja.periodo}
 - Data de Criação: ${insights.dadosLoja.dataRelatorio}
 
-**RESUMO GERAL DOS ANÚNCIOS:**
+**RESUMO GERAL VALIDADO:**
 - Total de Anúncios: ${insights.resumoGeral.totalAnuncios}
 - Anúncios Ativos: ${insights.resumoGeral.anunciosAtivos}
 - Anúncios Pausados: ${insights.resumoGeral.anunciosPausados}
 - Anúncios Encerrados: ${insights.resumoGeral.anunciosEncerrados}
-- Total de Impressões: ${insights.resumoGeral.totalImpressoes.toLocaleString('pt-BR')}
-- Total de Cliques: ${insights.resumoGeral.totalCliques.toLocaleString('pt-BR')}
-- Total de Conversões: ${insights.resumoGeral.totalConversoes}
-- Total de Despesas (INVESTIMENTO): R$ ${insights.resumoGeral.totalDespesas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-- Total GMV: R$ ${insights.resumoGeral.totalGMV.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-- Total Itens Vendidos: ${insights.resumoGeral.totalItensVendidos}
-- CTR Médio: ${insights.resumoGeral.ctrMedio}%
-- Taxa de Conversão Média: ${insights.resumoGeral.taxaConversaoMedia}%
-- ROAS Geral: ${insights.resumoGeral.roasGeral}
-- CPA Médio: R$ ${insights.resumoGeral.cpaMedio}
+- **INVESTIMENTO TOTAL**: R$ ${insights.resumoGeral.totalDespesas.toFixed(2)}
+- **RECEITA TOTAL (GMV)**: R$ ${insights.resumoGeral.totalGMV.toFixed(2)}
+- **ROAS GERAL CORRETO**: ${insights.resumoGeral.roasGeral}x
+- **CONVERSÕES TOTAIS**: ${insights.resumoGeral.totalConversoes}
+- **CPA MÉDIO**: R$ ${insights.resumoGeral.cpaMedio}
 
-**DETALHAMENTO POR ANÚNCIO (USE ESTES VALORES EXATOS):**
-${dadosProcessados.anuncios.map((anuncio, i) => 
-  `${i+1}. ${anuncio.nome}
-     - ID: ${anuncio.idProduto}
+🔍 **VALIDAÇÃO DOS DADOS:**
+- Se ROAS geral = ${insights.resumoGeral.roasGeral}x e é > 4x → CONTA SAUDÁVEL
+- Se ROAS geral = ${insights.resumoGeral.roasGeral}x e é > 6x → CONTA MUITO BOA
+- Se ROAS geral = ${insights.resumoGeral.roasGeral}x e é > 8x → CONTA ESCALÁVEL
+
+**PRODUTOS PRINCIPAIS (USE ESTES VALORES EXATOS):**
+${dadosProcessados.anuncios.slice(0, 10).map((anuncio, i) => {
+  const roasValidado = anuncio.despesas > 0 ? (anuncio.gmv / anuncio.despesas).toFixed(2) : '0.00';
+  return `${i+1}. ${anuncio.nome}
      - Status: ${anuncio.status}
-     - INVESTIMENTO (Despesas): R$ ${anuncio.despesas.toFixed(2)}
-     - GMV (Receita): R$ ${anuncio.gmv.toFixed(2)}
-     - ROAS: ${anuncio.roas}
-     - Cliques: ${anuncio.cliques}
+     - **INVESTIMENTO**: R$ ${anuncio.despesas.toFixed(2)}
+     - **RECEITA (GMV)**: R$ ${anuncio.gmv.toFixed(2)}
+     - **ROAS VALIDADO**: ${roasValidado}x ${roasValidado > 8 ? '✅ ESCALÁVEL' : roasValidado > 6 ? '✅ MUITO BOM' : roasValidado > 4 ? '✅ BOM' : '❌ BAIXO'}
      - Conversões: ${anuncio.conversoes}
-     - CTR: ${anuncio.ctr}
-     - Impressões: ${anuncio.impressoes}`
-).join('\n\n')}
+     - CTR: ${anuncio.ctr}%
+     - Taxa Conversão: ${anuncio.taxaConversao}%`;
+}).join('\n\n')}
 
-**TOP 5 ANÚNCIOS POR ROAS:**
-${insights.topPerformers.top5ROAS.map((anuncio, i) => 
-  `${i+1}. ${anuncio.nome} (ID: ${anuncio.idProduto}) - ROAS: ${anuncio.roas} - GMV: R$ ${anuncio.gmv.toFixed(2)} - Investimento: R$ ${anuncio.despesas.toFixed(2)}`
-).join('\n')}
+🚨 **INTERPRETAÇÃO OBRIGATÓRIA:**
+1. Se produto tem ROAS > 6x → "Excelente performance, acima do benchmark"
+2. Se produto tem ROAS > 4x → "Performance saudável"
+3. Se produto tem ROAS < 4x → "Precisa otimização"
+4. **NUNCA** diga valores impossíveis como "ROAS 1.543x" ou "conversão 256%"
+5. **SEMPRE** use os valores GMV e Despesas corretos para calcular ROAS
 
-**TOP 5 ANÚNCIOS POR GMV:**
-${insights.topPerformers.top5GMV.map((anuncio, i) => 
-  `${i+1}. ${anuncio.nome} (ID: ${anuncio.idProduto}) - GMV: R$ ${anuncio.gmv.toFixed(2)} - ROAS: ${anuncio.roas} - Investimento: R$ ${anuncio.despesas.toFixed(2)}`
-).join('\n')}
+**DIAGNÓSTICO CORRETO:**
+Com ROAS geral de ${insights.resumoGeral.roasGeral}x, esta conta demonstra ${insights.resumoGeral.roasGeral > 6 ? 'excelente' : insights.resumoGeral.roasGeral > 4 ? 'boa' : 'baixa'} performance. 
+${insights.resumoGeral.roasGeral > 6 ? 'Foque em escalar os produtos de melhor performance.' : insights.resumoGeral.roasGeral > 4 ? 'Otimize produtos com ROAS baixo e escale os melhores.' : 'Revise estratégia geral e otimize campanhas.'}
 
-**ANÚNCIOS COM PROBLEMAS IDENTIFICADOS (${insights.problemasIdentificados.length}):**
-${insights.problemasIdentificados.map(anuncio => 
-  `- ${anuncio.nome} (ID: ${anuncio.idProduto}) - Status: ${anuncio.status} - ROAS: ${anuncio.roas} - CTR: ${anuncio.ctr} - Conversões: ${anuncio.conversoes} - Investimento: R$ ${anuncio.despesas.toFixed(2)}`
-).join('\n')}
-
-🚨 INSTRUÇÕES CRÍTICAS - LEIA COM ATENÇÃO:
-1. Use APENAS os valores fornecidos acima - NUNCA invente dados
-2. INVESTIMENTO = Coluna "Despesas" do CSV (não confundir com GMV)
-3. GMV = Coluna "GMV" do CSV (receita gerada)
-4. ROAS = GMV ÷ Investimento (já calculado corretamente)
-5. NUNCA inverta as colunas ou troque valores
-6. Se um valor parecer inconsistente, mencione no diagnóstico
-7. Use os números exatos conforme mostrados acima
-8. Contagem correta: ${insights.resumoGeral.anunciosAtivos} campanhas ativas, ${insights.resumoGeral.anunciosPausados} pausadas
-9. Total de conversões real: ${insights.resumoGeral.totalConversoes} (não 2.724)
-
-Gere um relatório completo e profissional baseado exclusivamente nestes dados CSV estruturados.`;
+Gere um relatório baseado exclusivamente nestes dados VALIDADOS e CORRETOS.`;
 
     // Gerar análise com IA usando os dados estruturados
     let markdownFinal = await gerarAnaliseComIA(
