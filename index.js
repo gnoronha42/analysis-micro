@@ -4,7 +4,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
 const { processarComparacao } = require('./comparison');
-const { processarCSVAnuncios, gerarInsightsCSV } = require("./csv-processor");
+const { processarCSVAnuncios, gerarInsightsCSV, processarCSVAnaliseContaCompleta } = require("./csv-processor");
 const { marked } = require('marked');
 
 const cors = require('cors');
@@ -311,7 +311,7 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
       const requestBody = {
         model: "gpt-4.1",
         messages,
-        max_tokens: 6000,
+        max_tokens: 16000, // Aumentado para análises mais completas
         temperature: 0,
         top_p: 1,
       };
@@ -327,8 +327,11 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
             Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           },
           body: JSON.stringify(requestBody),
+          signal: controller.signal
         }
       );
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -418,27 +421,31 @@ app.post('/analise', async (req, res) => {
 // Nova rota para análise de CSV
 app.post('/analise-csv', async (req, res) => {
   try {
-    const { csvContent, analysisType, clientName } = req.body;
+    const { csvContent, csvFiles, analysisType, clientName } = req.body;
 
     console.log('📊 Recebida requisição de análise CSV');
     console.log('👤 Cliente:', clientName);
     console.log('📋 Tipo:', analysisType);
-    console.log('📄 Tamanho do CSV:', csvContent?.length || 0);
+    console.log('📄 CSV Content:', csvContent ? csvContent.length : 0);
+    console.log('📄 CSV Files:', csvFiles ? csvFiles.length : 0);
 
-    if (!csvContent || typeof csvContent !== 'string') {
-      return res.status(400).json({ error: "Conteúdo CSV é obrigatório" });
+    // Validar tipo de análise
+    if (!analysisType || !["ads", "account"].includes(analysisType)) {
+      return res.status(400).json({ error: "Tipo de análise deve ser 'ads' ou 'account'" });
     }
 
-    if (analysisType !== "ads") {
-      return res.status(400).json({ error: "Análise CSV disponível apenas para tipo 'ads'" });
-    }
+    // Análise de ADS (código existente)
+    if (analysisType === "ads") {
+      if (!csvContent || typeof csvContent !== 'string') {
+        return res.status(400).json({ error: "Conteúdo CSV é obrigatório para análise de ads" });
+      }
 
-    // Processar CSV
-    const dadosProcessados = processarCSVAnuncios(csvContent);
-    const insights = gerarInsightsCSV(dadosProcessados);
-    
-    // Criar prompt específico para CSV com dados estruturados
-    const csvPrompt = `${ADVANCED_ADS_PROMPT}
+      // Processar CSV de ads (código existente)
+      const dadosProcessados = processarCSVAnuncios(csvContent);
+      const insights = gerarInsightsCSV(dadosProcessados);
+      
+      // Criar prompt específico para CSV com dados estruturados (código existente)
+      const csvPrompt = `${ADVANCED_ADS_PROMPT}
 
 🚨 ANÁLISE BASEADA EM DADOS CSV ESTRUTURADOS - SHOPEE ADS 🚨
 
@@ -498,28 +505,137 @@ ${insights.resumoGeral.roasGeral > 6 ? 'Foque em escalar os produtos de melhor p
 
 Gere um relatório baseado exclusivamente nestes dados VALIDADOS e CORRETOS.`;
 
-    // Gerar análise com IA usando os dados estruturados
-    let markdownFinal = await gerarAnaliseComIA(
-      csvPrompt,
-      [], // Não há imagens para CSV
-      analysisType,
-      [JSON.stringify(insights, null, 2)] // Passar insights como OCR text
-    );
+      // Gerar análise com IA usando os dados estruturados
+      let markdownFinal = await gerarAnaliseComIA(
+        csvPrompt,
+        [], // Não há imagens para CSV
+        analysisType,
+        [JSON.stringify(insights, null, 2)] // Passar insights como OCR text
+      );
 
-    console.log('📝 Análise CSV gerada com sucesso');
+      console.log('📝 Análise CSV ADS gerada com sucesso');
 
-    res.json({
-      analysis: markdownFinal,
-      analysisType,
-      clientName: clientName || "Cliente",
-      timestamp: new Date().toISOString(),
-      csvData: {
-        totalAnuncios: insights.resumoGeral.totalAnuncios,
-        roasGeral: insights.resumoGeral.roasGeral,
-        totalGMV: insights.resumoGeral.totalGMV,
-        totalDespesas: insights.resumoGeral.totalDespesas
+      return res.json({
+        analysis: markdownFinal,
+        analysisType,
+        clientName: clientName || "Cliente",
+        timestamp: new Date().toISOString(),
+        csvData: {
+          totalAnuncios: insights.resumoGeral.totalAnuncios,
+          roasGeral: insights.resumoGeral.roasGeral,
+          totalGMV: insights.resumoGeral.totalGMV,
+          totalDespesas: insights.resumoGeral.totalDespesas
+        }
+      });
+    }
+
+    // ===== NOVA ANÁLISE DE ACCOUNT VIA CSV =====
+    if (analysisType === "account") {
+      if (!csvFiles || !Array.isArray(csvFiles) || csvFiles.length === 0) {
+        return res.status(400).json({ error: "Arquivos CSV são obrigatórios para análise de conta" });
       }
-    });
+
+      console.log('📊 Processando análise de CONTA via múltiplos CSVs...');
+      
+      // Processar múltiplos CSVs
+      const dadosCompletos = processarCSVAnaliseContaCompleta(csvFiles);
+      const resumo = dadosCompletos.resumoConsolidado;
+      
+      console.log('✅ Dados processados com sucesso');
+      console.log('📊 Resumo das métricas:', JSON.stringify(resumo.metricas, null, 2));
+      
+      // Criar prompt específico para análise de conta usando o ADVANCED_ACCOUNT_PROMPT
+      const csvAccountPrompt = `${ADVANCED_ACCOUNT_PROMPT}
+
+🚨 ANÁLISE BASEADA EM DADOS CSV ESTRUTURADOS - ANÁLISE COMPLETA DE CONTA SHOPEE 🚨
+
+⚠️ INSTRUÇÕES CRÍTICAS - DADOS REAIS EXTRAÍDOS DOS CSVs:
+
+**DADOS CONSOLIDADOS DA CONTA:**
+- **Período de Análise**: ${resumo.periodoAnalise || 'Último mês'}
+- **Visitantes Únicos**: ${(resumo.metricas.visitantes || 0).toLocaleString('pt-BR')}
+- **GMV Total**: R$ ${(resumo.metricas.gmv || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+- **Pedidos Pagos**: ${(resumo.metricas.pedidosPagos || 0).toLocaleString('pt-BR')}
+- **Taxa de Conversão**: ${(resumo.metricas.taxaConversao || 0).toFixed(2)}%
+- **Ticket Médio**: R$ ${(resumo.metricas.ticketMedio || 0).toFixed(2)}
+- **Investimento em Ads**: R$ ${(resumo.metricas.investimentoAds || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+- **ROAS**: ${resumo.metricas.roas || 0}x
+- **CPA**: R$ ${resumo.metricas.cpa || 0}
+
+**TOP 5 PRODUTOS POR VISITANTES:**
+${resumo.topProdutos.porVisitantes.length > 0 ? 
+  resumo.topProdutos.porVisitantes.map((produto, i) => 
+    `${i+1}. ${produto.nome} - ${produto.visitantes.toLocaleString('pt-BR')} visitantes`
+  ).join('\n') : 'Nenhum produto encontrado'}
+
+**TOP 5 PRODUTOS POR VISUALIZAÇÕES DA PÁGINA:**
+${resumo.topProdutos.porVisualizacoes.length > 0 ? 
+  resumo.topProdutos.porVisualizacoes.map((produto, i) => 
+    `${i+1}. ${produto.nome} - ${produto.visualizacoes.toLocaleString('pt-BR')} views, ${produto.taxaConversao.toFixed(2)}% conversão`
+  ).join('\n') : 'Nenhum produto encontrado'}
+
+**TOP 5 PRODUTOS POR VENDAS (GMV):**
+${resumo.topProdutos.porVendas.length > 0 ? 
+  resumo.topProdutos.porVendas.map((produto, i) => 
+    `${i+1}. ${produto.nome} - R$ ${produto.vendas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`
+  ).join('\n') : 'Nenhum produto encontrado'}
+
+**TOP 5 PRODUTOS POR TAXA DE CONVERSÃO:**
+${resumo.topProdutos.porTaxaConversao.length > 0 ? 
+  resumo.topProdutos.porTaxaConversao.map((produto, i) => 
+    `${i+1}. ${produto.nome} - ${produto.taxaConversao.toFixed(2)}% conversão, ${produto.unidades} unidades`
+  ).join('\n') : 'Nenhum produto encontrado'}
+
+**TOP 5 PRODUTOS POR ADIÇÕES AO CARRINHO:**
+${resumo.topProdutos.porCarrinho.length > 0 ? 
+  resumo.topProdutos.porCarrinho.map((produto, i) => 
+    `${i+1}. ${produto.nome} - ${produto.visitantesCarrinho.toLocaleString('pt-BR')} adições ao carrinho`
+  ).join('\n') : 'Nenhum produto encontrado'}
+
+${resumo.campanhasAds.totalCampanhas > 0 ? `
+**DADOS DE CAMPANHAS SHOPEE ADS:**
+- **Total de Campanhas**: ${resumo.campanhasAds.totalCampanhas}
+- **Campanhas Ativas**: ${resumo.campanhasAds.ativas}
+- **Campanhas Pausadas**: ${resumo.campanhasAds.pausadas}
+- **ROAS Médio das Campanhas**: ${resumo.campanhasAds.roasMedio}x
+- **Investimento Total em Ads**: R$ ${resumo.campanhasAds.investimentoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+` : ''}
+
+**INSTRUÇÕES PARA ANÁLISE:**
+1. Use EXCLUSIVAMENTE os dados reais fornecidos acima
+2. NUNCA use valores de exemplo ou template
+3. Calcule o CPA corretamente: CPA = Investimento em Ads ÷ Pedidos Pagos
+4. Mencione os produtos específicos pelos nomes reais
+5. Base todas as recomendações nos dados reais da conta
+6. Se algum dado não estiver disponível, escreva "Dado não informado"
+
+Gere um relatório COMPLETO seguindo rigorosamente o formato do ADVANCED_ACCOUNT_PROMPT usando APENAS estes dados reais.`;
+
+      // Gerar análise com IA usando os dados consolidados
+      let markdownFinal = await gerarAnaliseComIA(
+        csvAccountPrompt,
+        [], // Não há imagens para CSV
+        analysisType,
+        [JSON.stringify(resumo, null, 2)] // Passar resumo consolidado como OCR text
+      );
+
+      console.log('📝 Análise CSV ACCOUNT gerada com sucesso');
+
+      return res.json({
+        analysis: markdownFinal,
+        analysisType,
+        clientName: clientName || "Cliente",
+        timestamp: new Date().toISOString(),
+        csvData: {
+          visitantes: resumo.metricas.visitantes,
+          gmv: resumo.metricas.gmv,
+          pedidosPagos: resumo.metricas.pedidosPagos,
+          taxaConversao: resumo.metricas.taxaConversao,
+          ticketMedio: resumo.metricas.ticketMedio,
+          totalProdutos: resumo.topProdutos.porVendas.length
+        }
+      });
+    }
 
   } catch (error) {
     console.error('❌ Erro na análise CSV:', error);

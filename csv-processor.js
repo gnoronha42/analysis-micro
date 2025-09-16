@@ -180,7 +180,392 @@ function gerarInsightsCSV(dadosProcessados) {
   };
 }
 
+// ===== NOVAS FUNÇÕES PARA ANÁLISE DE CONTA VIA CSV =====
+
+// Função para processar múltiplos CSVs de análise de conta
+function processarCSVAnaliseContaCompleta(csvFiles) {
+  try {
+    console.log('📊 Iniciando processamento completo de análise de conta via CSV...');
+    
+    let dadosCompletos = {
+      estatisticasLoja: null,
+      detalhesProdutos: [],
+      visaoGeralProdutos: [],
+      dadosAnuncios: null,
+      resumoConsolidado: {}
+    };
+
+    // Processar cada arquivo CSV
+    csvFiles.forEach((arquivo, index) => {
+      console.log(`📄 Processando arquivo ${index + 1}: ${arquivo.nome || 'arquivo'}`);
+      
+      if (arquivo.nome && arquivo.nome.includes('shop-stats')) {
+        // Arquivo de estatísticas da loja
+        dadosCompletos.estatisticasLoja = processarCSVEstatisticasLoja(arquivo.conteudo);
+      } else if (arquivo.nome && arquivo.nome.includes('parentskudetail')) {
+        // Arquivo de detalhes dos produtos
+        dadosCompletos.detalhesProdutos = processarCSVDetalhesProdutos(arquivo.conteudo);
+      } else if (arquivo.nome && arquivo.nome.includes('productoverview')) {
+        // Arquivo de visão geral dos produtos
+        dadosCompletos.visaoGeralProdutos = processarCSVVisaoGeralProdutos(arquivo.conteudo);
+      } else if (arquivo.nome && arquivo.nome.includes('Anúncios')) {
+        // Arquivo de dados de anúncios (reutilizar função existente)
+        dadosCompletos.dadosAnuncios = processarCSVAnuncios(arquivo.conteudo);
+      }
+    });
+
+    // Consolidar dados
+    dadosCompletos.resumoConsolidado = consolidarDadosAnalise(dadosCompletos);
+    
+    return dadosCompletos;
+  } catch (error) {
+    console.error('❌ Erro ao processar CSVs de análise de conta:', error);
+    throw new Error('Erro ao processar arquivos CSV para análise de conta');
+  }
+}
+
+// Função para processar CSV de estatísticas da loja (shop-stats)
+function processarCSVEstatisticasLoja(csvContent) {
+  try {
+    console.log('📊 Processando estatísticas da loja...');
+    const linhas = csvContent.split('\n');
+    const estatisticas = [];
+    let resumoMensal = {};
+    
+    // Primeira linha com dados do período completo
+    if (linhas.length > 1 && linhas[1]) {
+      const dadosMensais = parseCSVLine(linhas[1]);
+      if (dadosMensais.length >= 7) { // Reduzido para aceitar CSVs com menos campos
+                  resumoMensal = {
+          periodo: dadosMensais[0].replace(/"/g, ''),
+          vendas: parseFloat(dadosMensais[1].replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) || 0,
+          pedidos: parseInt(dadosMensais[2].replace(/[^\d]/g, '')) || 0,
+          vendasPorPedido: parseFloat(dadosMensais[3].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+          cliquesPorProduto: parseInt(dadosMensais[4] ? dadosMensais[4].replace(/[^\d]/g, '') : '0') || 0,
+          visitantes: parseInt(dadosMensais[5].replace(/[^\d]/g, '')) || 0,
+          taxaConversao: parseFloat(dadosMensais[6].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+          pedidosCancelados: parseInt((dadosMensais[7] || '0').replace(/[^\d]/g, '')) || 0,
+          vendasCanceladas: parseFloat((dadosMensais[8] || '0').replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) || 0,
+          pedidosDevolvidos: parseInt((dadosMensais[9] || '0').replace(/[^\d]/g, '')) || 0,
+          vendasDevolvidas: parseFloat((dadosMensais[10] || '0').replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) || 0,
+          numeroCompradores: parseInt((dadosMensais[11] || '0').replace(/[^\d]/g, '')) || 0,
+          novosCompradores: parseInt((dadosMensais[12] || '0').replace(/[^\d]/g, '')) || 0,
+          compradoresExistentes: parseInt((dadosMensais[13] || '0').replace(/[^\d]/g, '')) || 0,
+          compradoresPotenciais: parseInt((dadosMensais[14] || '0').replace(/[^\d]/g, '')) || 0,
+          indiceRecompra: parseFloat((dadosMensais[15] || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0
+        };
+      }
+    }
+    
+    // Processar dados diários (a partir da linha 5)
+    for (let i = 4; i < linhas.length; i++) {
+      const linha = linhas[i].trim();
+      if (linha && !linha.startsWith('"Data"') && linha !== '""') {
+        const dados = parseCSVLine(linha);
+        if (dados.length >= 16 && dados[0] !== '""') {
+          estatisticas.push({
+            data: dados[0].replace(/"/g, ''),
+            vendas: parseFloat(dados[1].replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) || 0,
+            pedidos: parseInt(dados[2].replace(/[^\d]/g, '')) || 0,
+            vendasPorPedido: parseFloat(dados[3].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+            cliquesPorProduto: parseInt(dados[4].replace(/[^\d]/g, '')) || 0,
+            visitantes: parseInt(dados[5].replace(/[^\d]/g, '')) || 0,
+            taxaConversao: parseFloat(dados[6].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+            pedidosCancelados: parseInt(dados[7].replace(/[^\d]/g, '')) || 0,
+            vendasCanceladas: parseFloat(dados[8].replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) || 0,
+            pedidosDevolvidos: parseInt(dados[9].replace(/[^\d]/g, '')) || 0,
+            vendasDevolvidas: parseFloat(dados[10].replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) || 0,
+            numeroCompradores: parseInt(dados[11].replace(/[^\d]/g, '')) || 0,
+            novosCompradores: parseInt(dados[12].replace(/[^\d]/g, '')) || 0,
+            compradoresExistentes: parseInt(dados[13].replace(/[^\d]/g, '')) || 0,
+            compradoresPotenciais: parseInt(dados[14].replace(/[^\d]/g, '')) || 0,
+            indiceRecompra: parseFloat(dados[15].replace(/[^\d.,]/g, '').replace(',', '.')) || 0
+          });
+        }
+      }
+    }
+    
+    console.log(`📊 Processados ${estatisticas.length} dias de estatísticas`);
+    return { resumoMensal, estatisticasDiarias: estatisticas };
+  } catch (error) {
+    console.error('❌ Erro ao processar estatísticas da loja:', error);
+    throw error;
+  }
+}
+
+// Função para processar CSV de detalhes dos produtos (parentskudetail)
+function processarCSVDetalhesProdutos(csvContent) {
+  try {
+    console.log('📊 Processando detalhes dos produtos...');
+    const linhas = csvContent.split('\n');
+    const produtos = [];
+    
+    // Processar a partir da linha 2 (primeira linha é cabeçalho)
+    for (let i = 1; i < linhas.length; i++) {
+      const linha = linhas[i].trim();
+      if (linha && linha !== '""') {
+        const dados = parseCSVLine(linha);
+        if (dados.length >= 27) {
+          produtos.push({
+            idItem: dados[0].replace(/"/g, ''),
+            nomeProduto: dados[1].replace(/"/g, ''),
+            statusItem: dados[2].replace(/"/g, ''),
+            idVariacao: dados[3].replace(/"/g, ''),
+            nomeVariacao: dados[4].replace(/"/g, ''),
+            statusVariacao: dados[5].replace(/"/g, ''),
+            skuVariacao: dados[6].replace(/"/g, ''),
+            skuPrincipal: dados[7].replace(/"/g, ''),
+            visitantesProduto: parseInt(dados[8].replace(/[^\d]/g, '')) || 0,
+            visualizacoesPagina: parseInt(dados[9].replace(/[^\d]/g, '')) || 0,
+            visitantesSairam: parseInt(dados[10].replace(/[^\d]/g, '')) || 0,
+            taxaRejeicao: parseFloat(dados[11].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+            cliquesBusca: parseInt(dados[12].replace(/[^\d]/g, '')) || 0,
+            curtidas: parseInt(dados[13].replace(/[^\d]/g, '')) || 0,
+            visitantesCarrinho: parseInt(dados[14].replace(/[^\d]/g, '')) || 0,
+            unidadesCarrinho: parseInt(dados[15].replace(/[^\d]/g, '')) || 0,
+            taxaConversaoCarrinho: parseFloat(dados[16].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+            compradoresPedido: parseInt(dados[17].replace(/[^\d]/g, '')) || 0,
+            unidadesPedido: parseInt(dados[18].replace(/[^\d]/g, '')) || 0,
+            vendasPedido: parseFloat(dados[19].replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) || 0,
+            taxaConversaoPedido: parseFloat(dados[20].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+            compradoresPago: parseInt(dados[21].replace(/[^\d]/g, '')) || 0,
+            unidadesPago: parseInt(dados[22].replace(/[^\d]/g, '')) || 0,
+            vendasPago: parseFloat(dados[23].replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) || 0,
+            taxaConversaoPago: parseFloat(dados[24].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+            taxaRepeticaoPedido: parseFloat(dados[25].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+            mediaDiasRepetir: parseFloat(dados[26].replace(/[^\d.,]/g, '').replace(',', '.')) || 0
+          });
+        }
+      }
+    }
+    
+    console.log(`📊 Processados ${produtos.length} produtos detalhados`);
+    return produtos;
+  } catch (error) {
+    console.error('❌ Erro ao processar detalhes dos produtos:', error);
+    throw error;
+  }
+}
+
+// Função para processar CSV de visão geral dos produtos (productoverview)
+function processarCSVVisaoGeralProdutos(csvContent) {
+  try {
+    console.log('📊 Processando visão geral dos produtos...');
+    const linhas = csvContent.split('\n');
+    const visaoGeral = [];
+    
+    // Processar a partir da linha 2 (primeira linha é cabeçalho)
+    for (let i = 1; i < linhas.length; i++) {
+      const linha = linhas[i].trim();
+      if (linha && linha !== '""') {
+        const dados = parseCSVLine(linha);
+        if (dados.length >= 21) {
+          visaoGeral.push({
+            data: dados[0].replace(/"/g, ''),
+            visitantesProduto: parseInt(dados[1].replace(/[^\d]/g, '')) || 0,
+            visualizacoesPagina: parseInt(dados[2].replace(/[^\d]/g, '')) || 0,
+            itensVisitados: parseInt(dados[3].replace(/[^\d]/g, '')) || 0,
+            visitantesSairam: parseInt(dados[4].replace(/[^\d]/g, '')) || 0,
+            taxaRejeicao: parseFloat(dados[5].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+            cliquesBusca: parseInt(dados[6].replace(/[^\d]/g, '')) || 0,
+            curtidas: parseInt(dados[7].replace(/[^\d]/g, '')) || 0,
+            visitantesCarrinho: parseInt(dados[8].replace(/[^\d]/g, '')) || 0,
+            unidadesCarrinho: parseInt(dados[9].replace(/[^\d]/g, '')) || 0,
+            taxaConversaoCarrinho: parseFloat(dados[10].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+            compradoresPedido: parseInt(dados[11].replace(/[^\d]/g, '')) || 0,
+            unidadesPedido: parseInt(dados[12].replace(/[^\d]/g, '')) || 0,
+            produtosPedidos: parseInt(dados[13].replace(/[^\d]/g, '')) || 0,
+            vendasPedido: parseFloat(dados[14].replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) || 0,
+            taxaConversaoPedido: parseFloat(dados[15].replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+            compradoresPago: parseInt(dados[16].replace(/[^\d]/g, '')) || 0,
+            unidadesPago: parseInt(dados[17].replace(/[^\d]/g, '')) || 0,
+            itensPagos: parseInt(dados[18].replace(/[^\d]/g, '')) || 0,
+            vendasPago: parseFloat(dados[19].replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) || 0,
+            taxaConversaoPago: parseFloat(dados[20].replace(/[^\d.,]/g, '').replace(',', '.')) || 0
+          });
+        }
+      }
+    }
+    
+    console.log(`📊 Processados ${visaoGeral.length} dias de visão geral dos produtos`);
+    return visaoGeral;
+  } catch (error) {
+    console.error('❌ Erro ao processar visão geral dos produtos:', error);
+    throw error;
+  }
+}
+
+// Função para consolidar todos os dados de análise
+function consolidarDadosAnalise(dadosCompletos) {
+  try {
+    console.log('📊 Consolidando dados de análise...');
+    
+    const resumo = {
+      periodoAnalise: null,
+      metricas: {
+        visitantes: 0,
+        gmv: 0,
+        pedidosPagos: 0,
+        taxaConversao: 0,
+        ticketMedio: 0,
+        investimentoAds: 0,
+        roas: 0,
+        cpa: 0
+      },
+      topProdutos: {
+        porVisitantes: [],
+        porVisualizacoes: [],
+        porVendas: [],
+        porTaxaConversao: [],
+        porCarrinho: []
+      },
+      tendencias: {
+        vendas: [],
+        visitantes: [],
+        conversao: []
+      },
+      campanhasAds: {
+        totalCampanhas: 0,
+        ativas: 0,
+        pausadas: 0,
+        roasMedio: 0,
+        investimentoTotal: 0
+      }
+    };
+
+    // Consolidar dados da loja
+    if (dadosCompletos.estatisticasLoja && dadosCompletos.estatisticasLoja.resumoMensal) {
+      const stats = dadosCompletos.estatisticasLoja.resumoMensal;
+      resumo.periodoAnalise = stats.periodo;
+      resumo.metricas.visitantes = stats.visitantes;
+      resumo.metricas.gmv = stats.vendas;
+      resumo.metricas.pedidosPagos = stats.pedidos;
+      resumo.metricas.taxaConversao = stats.taxaConversao;
+      resumo.metricas.ticketMedio = stats.vendasPorPedido;
+    }
+
+    // Consolidar dados de produtos
+    if (dadosCompletos.detalhesProdutos && dadosCompletos.detalhesProdutos.length > 0) {
+      // Top 5 produtos por visitantes
+      resumo.topProdutos.porVisitantes = dadosCompletos.detalhesProdutos
+        .filter(p => p && p.visitantesProduto > 0)
+        .sort((a, b) => (b.visitantesProduto || 0) - (a.visitantesProduto || 0))
+        .slice(0, 5)
+        .map(p => ({
+          nome: p.nomeProduto || 'Produto sem nome',
+          visitantes: p.visitantesProduto || 0,
+          visualizacoes: p.visualizacoesPagina || 0
+        }));
+
+      // Top 5 produtos por visualizações
+      resumo.topProdutos.porVisualizacoes = dadosCompletos.detalhesProdutos
+        .filter(p => p && p.visualizacoesPagina > 0)
+        .sort((a, b) => (b.visualizacoesPagina || 0) - (a.visualizacoesPagina || 0))
+        .slice(0, 5)
+        .map(p => ({
+          nome: p.nomeProduto || 'Produto sem nome',
+          visualizacoes: p.visualizacoesPagina || 0,
+          taxaConversao: p.taxaConversaoPago || 0
+        }));
+
+      // Top 5 produtos por vendas
+      resumo.topProdutos.porVendas = dadosCompletos.detalhesProdutos
+        .filter(p => p && p.vendasPago > 0)
+        .sort((a, b) => (b.vendasPago || 0) - (a.vendasPago || 0))
+        .slice(0, 5)
+        .map(p => ({
+          nome: p.nomeProduto || 'Produto sem nome',
+          vendas: p.vendasPago || 0,
+          unidades: p.unidadesPago || 0
+        }));
+
+      // Top 5 produtos por taxa de conversão
+      resumo.topProdutos.porTaxaConversao = dadosCompletos.detalhesProdutos
+        .filter(p => p && p.taxaConversaoPago > 0)
+        .sort((a, b) => (b.taxaConversaoPago || 0) - (a.taxaConversaoPago || 0))
+        .slice(0, 5)
+        .map(p => ({
+          nome: p.nomeProduto || 'Produto sem nome',
+          taxaConversao: p.taxaConversaoPago || 0,
+          unidades: p.unidadesPago || 0
+        }));
+
+      // Top 5 produtos por adições ao carrinho
+      resumo.topProdutos.porCarrinho = dadosCompletos.detalhesProdutos
+        .filter(p => p && p.visitantesCarrinho > 0)
+        .sort((a, b) => (b.visitantesCarrinho || 0) - (a.visitantesCarrinho || 0))
+        .slice(0, 5)
+        .map(p => ({
+          nome: p.nomeProduto || 'Produto sem nome',
+          visitantesCarrinho: p.visitantesCarrinho || 0,
+          unidadesCarrinho: p.unidadesCarrinho || 0
+        }));
+    }
+
+    // Consolidar dados de campanhas (se disponível)
+    if (dadosCompletos.dadosAnuncios && dadosCompletos.dadosAnuncios.anuncios) {
+      const anuncios = dadosCompletos.dadosAnuncios.anuncios;
+      resumo.campanhasAds.totalCampanhas = anuncios.length;
+      resumo.campanhasAds.ativas = anuncios.filter(a => a.status === 'Em Andamento').length;
+      resumo.campanhasAds.pausadas = anuncios.filter(a => a.status === 'Pausado').length;
+      resumo.campanhasAds.investimentoTotal = anuncios.reduce((acc, a) => acc + a.despesas, 0);
+      
+      const roasTotal = anuncios.reduce((acc, a) => acc + a.roas, 0);
+      resumo.campanhasAds.roasMedio = anuncios.length > 0 ? (roasTotal / anuncios.length).toFixed(2) : 0;
+      
+      // Atualizar métricas principais com dados de Ads
+      resumo.metricas.investimentoAds = resumo.campanhasAds.investimentoTotal;
+      resumo.metricas.roas = resumo.campanhasAds.roasMedio;
+      resumo.metricas.cpa = resumo.metricas.pedidosPagos > 0 ? 
+        (resumo.campanhasAds.investimentoTotal / resumo.metricas.pedidosPagos).toFixed(2) : 0;
+    }
+
+    // Calcular tendências (últimos 7 dias)
+    if (dadosCompletos.estatisticasLoja && dadosCompletos.estatisticasLoja.estatisticasDiarias) {
+      const ultimosDias = dadosCompletos.estatisticasLoja.estatisticasDiarias.slice(-7);
+      resumo.tendencias.vendas = ultimosDias.map(d => ({ data: d.data, valor: d.vendas }));
+      resumo.tendencias.visitantes = ultimosDias.map(d => ({ data: d.data, valor: d.visitantes }));
+      resumo.tendencias.conversao = ultimosDias.map(d => ({ data: d.data, valor: d.taxaConversao }));
+    }
+
+    console.log('✅ Dados consolidados com sucesso');
+    return resumo;
+  } catch (error) {
+    console.error('❌ Erro ao consolidar dados:', error);
+    throw error;
+  }
+}
+
+// Função auxiliar para fazer parse de linha CSV considerando aspas
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  result.push(current);
+  return result;
+}
+
 module.exports = {
   processarCSVAnuncios,
-  gerarInsightsCSV
+  gerarInsightsCSV,
+  // Novas funções para análise de conta
+  processarCSVAnaliseContaCompleta,
+  processarCSVEstatisticasLoja,
+  processarCSVDetalhesProdutos,
+  processarCSVVisaoGeralProdutos,
+  consolidarDadosAnalise
 };
