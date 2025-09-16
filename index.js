@@ -326,12 +326,9 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
             "Content-Type": "application/json",
             Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal
+          body: JSON.stringify(requestBody)
         }
       );
-      
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json();
