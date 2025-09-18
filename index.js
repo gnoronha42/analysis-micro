@@ -2027,7 +2027,7 @@ app.post('/analise-csv-bypass', async (req, res) => {
 
     // ETAPA 3: GERAR PROMPT OTIMIZADO
     console.log('⚡ [BYPASS] Gerando prompt otimizado...');
-    const promptBypass = gerarPromptBypass(EXPRESS_ACCOUNT_ANALYSIS, dadosReais);
+    const promptBypass = gerarPromptBypass(ADVANCED_ACCOUNT_PROMPT, dadosReais);
     
     // ETAPA 4: CHAMAR IA COM DADOS CORRETOS
     console.log('🤖 [BYPASS] Chamando IA com dados corretos...');
