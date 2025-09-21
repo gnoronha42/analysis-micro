@@ -135,7 +135,15 @@ async function gerarMensagemExpressOpenAI(dados) {
   const dadosProcessados = processarDadosParaPrompt(dados);
   
   // Anexar dados reais ao prompt para a IA usar exatamente estes valores
-  const dadosReaisBloco = `DADOS RECEBIDOS (VALORES REAIS):\n- Nome: ${dadosProcessados.nome}\n- Faturamento últimos 30 dias: R$ ${dadosProcessados.faturamento_30d}\n- Visitantes: ${dadosProcessados.visitantes}\n- Pedidos: ${dadosProcessados.pedidos}\n- Investimento Shopee Ads: R$ ${dadosProcessados.invest_ads_mensal}\n- ROAS Mensal: ${dadosProcessados.roas_mensal}\n- Maior desafio: ${dadosProcessados.maior_desafio}`;
+  const dadosReaisBloco = `- Nome: ${dados.nome}
+- Faturamento últimos 30 dias: R$ ${dados.faturamento30d}
+- Visitantes: ${dados.visitantes} 
+- Pedidos: ${dados.pedidos}
+- Investimento Shopee Ads: R$ ${dados.investimentoAds}
+- ROAS Mensal: ${dados.roasValido}x
+- Conversão: ${dados.conversao}% (a cada 100 pessoas, ${Math.round(dados.conversao)} compram)
+- Ticket Médio: R$ ${dados.ticketMedio}
+- Maior desafio: ${dados.desafio}`;
 
   const promptFinal = `${WHATSAPP_EXPRESS_PROMPT}\n\n${dadosReaisBloco}`;
 
@@ -415,9 +423,8 @@ async function enviarMensagemParaWhatsapp(numero, mensagem, nome = '') {
     console.log('💬 Enviando mensagem de texto...');
     
     // Limpar mensagem de caracteres problemáticos
-    const mensagemLimpa = mensagemFinal
-      .replace(/[^\w\s\-.,!?@#$%&*()+=\[\]{};:'"<>\/\\|`~áéíóúàèìòùâêîôûãõçÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÃÕÇ]/g, '') // Remove caracteres especiais
-      .trim();
+ const mensagemLimpa = mensagemFinal.replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F]/g, '').trim();
+
     
     console.log('📝 Mensagem original (100 chars):', mensagemFinal.substring(0, 100));
     console.log('📝 Mensagem limpa (100 chars):', mensagemLimpa.substring(0, 100));
@@ -461,6 +468,64 @@ async function enviarMensagemParaWhatsapp(numero, mensagem, nome = '') {
   }
 }
 
+function formatarPadraoWhatsApp(texto, nome) {
+  if (!texto || typeof texto !== 'string') return '';
+  let t = texto;
+
+
+  t = t.replace(/^.*AN[ÁA]LISE EXPRESS.*$/m, ''); // Remove qualquer header duplicado
+  const header = `📊 ANÁLISE EXPRESS – ${nome || 'Cliente'}\n`;
+
+  // Blocos principais
+  t = t.replace(/(^|\n)##?\s*DIAGN[ÓO]STICO SIMPLES E VISUAL/gi, '\n📊 Diagnóstico Simples e Visual');
+  t = t.replace(/(^|\n)##?\s*IMPACTO FINANCEIRO TRADUZIDO/gi, '\n💰 Impacto Financeiro Traduzido');
+  t = t.replace(/(^|\n)##?\s*RISCOS REAIS/gi, '\n⚠️ Riscos Reais');
+  t = t.replace(/(^|\n)##?\s*PROJE[ÇC][ÃA]O( REALISTA)?( E PROBLEMAS IDENTIFICADOS)?/gi, '\n📈 Projeção Realista e Problemas Identificados');
+  t = t.replace(/(^|\n)##?\s*FERRAMENTA QUE PODE TE AJUDAR/gi, '\n💡 Ferramenta que Pode te Ajudar');
+  t = t.replace(/(^|\n)##?\s*O PR[ÓO]XIMO N[ÍI]VEL DA SUA LOJA/gi, '\n🚀 O Próximo Nível da Sua Loja');
+  t = t.replace(/(^|\n)##?\s*INTELIG[ÊE]NCIA SEMANAL( – SELLERIA)?/gi, '\n🎯 Inteligência Semanal – SellerIA');
+
+
+  t = t.replace(/([\n\r]+)([A-Za-zÀ-ÿ\s,\-]+analisando seus dados com nossa metodologia[\s\S]+?travando o crescimento da sua loja\.)/i, '\n💡 $2');
+
+  t = t.replace(/(É como se sua loja estivesse aberta[\s\S]+?comprar nada\.)/i, '💥 $1');
+  t = t.replace(/(É como se sua loja ficasse fechada[\s\S]+?semana\.)/i, '💥 $1');
+
+  t = t.replace(/(^|\n)[\-=_]{3,}(\n|$)/g, '\n⸻\n'); // markdown ou outros separadores
+  t = t.replace(/\n{3,}/g, '\n\n'); // Limitar múltiplas quebras de linha
+
+  // Bullets para listas
+  t = t.replace(/(^|\n)[\-\*]\s+/g, '\n• '); // - ou * no início de linha
+  t = t.replace(/(^|\n)\d+\.\s+/g, '\n• '); // 1. 2. etc
+
+  // Negrito para métrica principal
+  t = t.replace(/\*\*(.*?)\*\*/g, '*$1*'); // **bold** -> *bold*
+
+  // Remover markdown headers
+  t = t.replace(/(^|\n)#+\s*/g, '\n');
+
+  // Limpar espaços extras
+  t = t.replace(/[ \t]{2,}/g, ' ');
+  t = t.replace(/\n{3,}/g, '\n\n');
+  t = t.trim();
+
+  // Link final
+  t = t.replace(/(https?:\/\/\S+)/g, '🔗 $1');
+
+  // Garante que bullets e blocos estejam sempre em nova linha
+  t = t.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  t = t.replace(/(• )/g, '\n• ');
+  t = t.replace(/\n{3,}/g, '\n\n');
+  t = t.replace(/^[ \t]+/gm, '');
+
+  // Adicionar cabeçalho personalizado no topo
+  if (!t.startsWith('📊 ANÁLISE EXPRESS')) {
+    t = header + '\n' + t;
+  }
+
+  return t;
+}
+
 router.post('/whatsapp-express', async (req, res) => {
   try {
     console.log('🚀 Iniciando processamento da análise express...');
@@ -486,8 +551,8 @@ router.post('/whatsapp-express', async (req, res) => {
     
     console.log('🤖 Análise da IA gerada (primeiros 300 chars):', analiseIA.substring(0, 300));
     
-    // Formatar markdown para estilo WhatsApp
-    const analise = formatarMarkdownParaWhatsApp(analiseIA, { nome });
+    // NÃO formatar markdown para WhatsApp, usar texto puro da IA
+    const analise = formatarPadraoWhatsApp(analiseIA, nome);
     console.log('📝 Mensagem final (primeiros 300 chars):', analise.substring(0, 300));
     
     // Envia a mensagem de texto para o WhatsApp
