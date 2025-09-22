@@ -920,8 +920,6 @@ A postura é de autoridade (dados, cálculos, benchmarks), mas a linguagem é si
 • ROAS: [X]x → traduzir em “a cada R$ 1 investido, você gera R$ X em vendas”, comparando com benchmark 8x+  
 • Status geral: frase curta (ex: “boa conversão, ticket baixo e ads eficiente mas não escalado”)  
 
-**Frase impacto:**  
-“[NOME], analisando seus dados com nossa metodologia de 47 métricas — a mesma usada em contas milionárias — encontrei pontos que estão custando dinheiro para você.”  
 
 ---
 
@@ -942,8 +940,6 @@ Exemplos a serem usados conforme os dados:
 • “Dependência de tráfego pago sem otimização pode reduzir sua margem em até [X]%.”  
 • “Conversão abaixo de [Y]% indica problemas de precificação ou produto que custam vendas todos os dias.”  
 
-Metáfora obrigatória no final:  
-“É como se sua loja ficasse fechada 1 dia inteiro toda semana.”  
 
 ---
 

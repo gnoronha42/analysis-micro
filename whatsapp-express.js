@@ -164,7 +164,7 @@ async function gerarMensagemExpressOpenAI(dados) {
 
 INSTRUÇÕES ESPECÍFICAS:
 1. Use EXATAMENTE os dados fornecidos - NUNCA invente valores
-2. Gere apenas a "SAÍDA 2 - MINI-RELATÓRIO" do prompt
+2. Gere apenas o mini-relatório do prompt
 3. Faça TODOS os cálculos conforme as regras definidas no prompt
 4. Use os selos e classificações exatas conforme o prompt
 5. Seja técnico, objetivo e focado em conversão para assinatura
@@ -474,6 +474,13 @@ function formatarPadraoWhatsApp(texto, nome) {
 
 
   t = t.replace(/^.*AN[ÁA]LISE EXPRESS.*$/m, ''); // Remove qualquer header duplicado
+  
+  // Remove frases indesejadas específicas
+  t = t.replace(/SA[ÍI]DA\s*2\s*-?\s*MINI-RELAT[ÓO]RIO/gi, '');
+  t = t.replace(/\*?Frase impacto:\*?[\s\S]*?encontrei pontos que est[ãa]o custando dinheiro para voc[êe]\./gi, '');
+  t = t.replace(/Met[áa]fora obrigat[óo]ria no final:[\s\S]*?É como se sua loja ficasse fechada 1 dia inteiro toda semana\./gi, '');
+  t = t.replace(/💥\s*É como se sua loja ficasse fechada 1 dia inteiro toda semana\./gi, '');
+  
   const header = `📊 ANÁLISE EXPRESS – ${nome || 'Cliente'}\n`;
 
   // Blocos principais
@@ -486,10 +493,10 @@ function formatarPadraoWhatsApp(texto, nome) {
   t = t.replace(/(^|\n)##?\s*INTELIG[ÊE]NCIA SEMANAL( – SELLERIA)?/gi, '\n🎯 Inteligência Semanal – SellerIA');
 
 
-  t = t.replace(/([\n\r]+)([A-Za-zÀ-ÿ\s,\-]+analisando seus dados com nossa metodologia[\s\S]+?travando o crescimento da sua loja\.)/i, '\n💡 $2');
-
-  t = t.replace(/(É como se sua loja estivesse aberta[\s\S]+?comprar nada\.)/i, '💥 $1');
-  t = t.replace(/(É como se sua loja ficasse fechada[\s\S]+?semana\.)/i, '💥 $1');
+  // Remover referências às frases de impacto e metáforas indesejadas
+  t = t.replace(/([\n\r]+)([A-Za-zÀ-ÿ\s,\-]+analisando seus dados com nossa metodologia[\s\S]+?encontrei pontos que est[ãa]o custando dinheiro para voc[êe]\.)/gi, '');
+  t = t.replace(/(É como se sua loja estivesse aberta[\s\S]+?comprar nada\.)/i, '');
+  t = t.replace(/(É como se sua loja ficasse fechada[\s\S]+?semana\.)/i, '');
 
   t = t.replace(/(^|\n)[\-=_]{3,}(\n|$)/g, '\n⸻\n'); // markdown ou outros separadores
   t = t.replace(/\n{3,}/g, '\n\n'); // Limitar múltiplas quebras de linha
@@ -504,6 +511,16 @@ function formatarPadraoWhatsApp(texto, nome) {
   // Remover markdown headers
   t = t.replace(/(^|\n)#+\s*/g, '\n');
 
+  // Remover mais referências específicas às frases indesejadas
+  t = t.replace(/Total em jogo:[\s\S]*?É como trabalhar \d+ dias de graça todo mês\./gi, (match) => {
+    return match.replace(/É como trabalhar \d+ dias de graça todo mês\./, '');
+  });
+  
+  // Limpar linhas vazias extras e seções vazias
+  t = t.replace(/\n\s*\n\s*\n/g, '\n\n');
+  t = t.replace(/---+/g, '');
+  t = t.replace(/___+/g, '');
+  
   // Limpar espaços extras
   t = t.replace(/[ \t]{2,}/g, ' ');
   t = t.replace(/\n{3,}/g, '\n\n');
