@@ -241,28 +241,50 @@ function gerarRecomendacoesPersonalizadas(dados, tipoRelatorio) {
   return recomendacoes;
 }
 
-// Função para calcular ROAS correto baseado nos dados reais
+// Função CRÍTICA para calcular ROAS correto - NUNCA INVERTER A FÓRMULA
 function calcularROASCorreto(dados) {
   const { gmv, investimento } = dados;
   
-  if (!gmv || !investimento || investimento <= 0) {
+  // Validações críticas de entrada
+  if (!gmv || !investimento || investimento <= 0 || gmv <= 0) {
+    console.error('❌ DADOS INVÁLIDOS para cálculo do ROAS:', { gmv, investimento });
     return null;
   }
   
+  // FÓRMULA CORRETA: ROAS = GMV ÷ INVESTIMENTO (NUNCA INVERTER!)
   const roas = gmv / investimento;
   
-  // Validação de ROAS
-  if (roas < 0.1 || roas > 50) {
-    console.warn('⚠️ ROAS fora do range esperado:', roas);
+  // Validações críticas de resultado
+  if (roas < 0.1) {
+    console.error('🚨 ROAS CRÍTICO MUITO BAIXO:', roas, '- Possível erro nos dados');
   }
+  
+  if (roas > 100) {
+    console.error('🚨 ROAS IMPOSSÍVEL:', roas, '- VOCÊ PROVAVELMENTE INVERTEU A FÓRMULA!');
+    console.error('🔧 Verifique: GMV =', gmv, '| Investimento =', investimento);
+    console.error('🔧 Fórmula correta: ROAS = GMV ÷ Investimento =', gmv, '÷', investimento, '=', roas);
+  }
+  
+  if (roas > 50) {
+    console.warn('⚠️ ROAS muito alto (suspeito):', roas, '- Verifique se os dados estão corretos');
+  }
+  
+  // Log de confirmação do cálculo
+  console.log('✅ ROAS calculado corretamente:', {
+    formula: 'GMV ÷ Investimento',
+    calculo: `${gmv} ÷ ${investimento} = ${roas.toFixed(2)}x`,
+    status: roas >= 8 ? '🟢 EXCELENTE' : roas >= 6 ? '🟡 MUITO BOM' : roas >= 4 ? '🟠 BOM' : '🔴 CRÍTICO'
+  });
   
   return {
     valor: roas,
     formatado: roas.toFixed(2),
-    status: roas >= 8 ? 'excelente' : roas >= 4 ? 'bom' : 'critico',
-    recomendacao: roas >= 8 ? 'Escalar campanhas' : 
+    status: roas >= 8 ? 'excelente' : roas >= 6 ? 'muito_bom' : roas >= 4 ? 'bom' : roas >= 2 ? 'regular' : 'critico',
+    recomendacao: roas >= 8 ? 'Escalar campanhas imediatamente' : 
+                  roas >= 6 ? 'Otimizar e escalar gradualmente' :
                   roas >= 4 ? 'Otimizar campanhas' : 
-                  'Pausar campanhas imediatamente'
+                  roas >= 2 ? 'Revisar estratégia' :
+                  'PAUSAR campanhas imediatamente - prejuízo!'
   };
 }
 
@@ -520,6 +542,88 @@ function extrairMetricasReaisDoCSV(csvFiles) {
   }
 }
 
+// NOVA FUNÇÃO CRÍTICA: Validação matemática pré-análise
+function validarDadosMatematicos(dados) {
+  console.log('🔍 === VALIDAÇÃO MATEMÁTICA CRÍTICA INICIADA ===');
+  
+  const erros = [];
+  const avisos = [];
+  
+  // Extrair valores principais
+  const gmv = parseFloat(dados.gmv || 0);
+  const investimento = parseFloat(dados.investimento || 0);
+  const pedidos = parseInt(dados.pedidos || 0);
+  const visitantes = parseInt(dados.visitantes || 0);
+  
+  console.log('📊 Valores extraídos:', { gmv, investimento, pedidos, visitantes });
+  
+  // VALIDAÇÃO 1: ROAS
+  if (gmv > 0 && investimento > 0) {
+    const roas = gmv / investimento;
+    console.log(`🧮 ROAS calculado: ${gmv} ÷ ${investimento} = ${roas.toFixed(2)}x`);
+    
+    if (roas > 100) {
+      erros.push(`🚨 ROAS IMPOSSÍVEL: ${roas.toFixed(2)}x - Você provavelmente INVERTEU a fórmula!`);
+      erros.push(`🔧 Corrija: ROAS = GMV (${gmv}) ÷ Investimento (${investimento}) = ${roas.toFixed(2)}x`);
+    } else if (roas > 50) {
+      avisos.push(`⚠️ ROAS muito alto: ${roas.toFixed(2)}x - Verifique se os dados estão corretos`);
+    } else if (roas < 0.1) {
+      erros.push(`🚨 ROAS muito baixo: ${roas.toFixed(2)}x - Possível erro nos dados`);
+    } else {
+      console.log(`✅ ROAS válido: ${roas.toFixed(2)}x`);
+    }
+  } else {
+    avisos.push('⚠️ GMV ou Investimento ausentes - ROAS não calculado');
+  }
+  
+  // VALIDAÇÃO 2: CPA
+  if (investimento > 0 && pedidos > 0) {
+    const cpa = investimento / pedidos;
+    console.log(`🧮 CPA calculado: ${investimento} ÷ ${pedidos} = R$ ${cpa.toFixed(2)}`);
+    
+    if (cpa > 1000) {
+      erros.push(`🚨 CPA muito alto: R$ ${cpa.toFixed(2)} - Verifique os dados`);
+    } else if (cpa < 0.1) {
+      erros.push(`🚨 CPA muito baixo: R$ ${cpa.toFixed(2)} - Dados inconsistentes`);
+    } else {
+      console.log(`✅ CPA válido: R$ ${cpa.toFixed(2)}`);
+    }
+  } else {
+    avisos.push('⚠️ Investimento ou Pedidos ausentes - CPA não calculado');
+  }
+  
+  // VALIDAÇÃO 3: Taxa de Conversão
+  if (visitantes > 0 && pedidos > 0) {
+    const conversao = (pedidos / visitantes) * 100;
+    console.log(`🧮 Conversão calculada: ${pedidos} ÷ ${visitantes} × 100 = ${conversao.toFixed(3)}%`);
+    
+    if (conversao > 25) {
+      erros.push(`🚨 Conversão impossível: ${conversao.toFixed(2)}% - Dados provavelmente trocados`);
+    } else if (conversao < 0.001) {
+      erros.push(`🚨 Conversão muito baixa: ${conversao.toFixed(3)}% - Escala incorreta`);
+    } else {
+      console.log(`✅ Conversão válida: ${conversao.toFixed(3)}%`);
+    }
+  } else {
+    avisos.push('⚠️ Visitantes ou Pedidos ausentes - Conversão não calculada');
+  }
+  
+  console.log('🔍 === VALIDAÇÃO MATEMÁTICA FINALIZADA ===');
+  console.log('❌ Erros encontrados:', erros.length);
+  console.log('⚠️ Avisos gerados:', avisos.length);
+  
+  return {
+    valido: erros.length === 0,
+    erros,
+    avisos,
+    dadosCalculados: {
+      roas: gmv > 0 && investimento > 0 ? (gmv / investimento).toFixed(2) : null,
+      cpa: investimento > 0 && pedidos > 0 ? (investimento / pedidos).toFixed(2) : null,
+      conversao: visitantes > 0 && pedidos > 0 ? ((pedidos / visitantes) * 100).toFixed(3) : null
+    }
+  };
+}
+
 // NOVA FUNÇÃO: Gerar prompt com dados corrigidos e validados
 function gerarPromptCorrigido(basePrompt, metricasCorrigidas) {
   console.log('🔧 Gerando prompt com dados corrigidos...');
@@ -527,6 +631,19 @@ function gerarPromptCorrigido(basePrompt, metricasCorrigidas) {
   if (!metricasCorrigidas || typeof metricasCorrigidas !== 'object') {
     console.log('⚠️ Métricas corrigidas não fornecidas, usando prompt padrão');
     return basePrompt;
+  }
+  
+  // APLICAR VALIDAÇÃO MATEMÁTICA ANTES DE GERAR PROMPT
+  const validacao = validarDadosMatematicos(metricasCorrigidas);
+  
+  if (!validacao.valido) {
+    console.error('❌ DADOS INVÁLIDOS DETECTADOS:', validacao.erros);
+    // Adicionar avisos críticos no prompt
+    basePrompt += '\n\n🚨 ATENÇÃO: ERROS MATEMÁTICOS DETECTADOS:\n';
+    validacao.erros.forEach(erro => {
+      basePrompt += `- ${erro}\n`;
+    });
+    basePrompt += '\n⚠️ CORRIJA ESTES ERROS ANTES DE CONTINUAR A ANÁLISE!\n\n';
   }
 
   const dadosCorretos = `
@@ -1078,17 +1195,46 @@ app.post('/analise', async (req, res) => {
     // Extrair métricas reais dos dados disponíveis
     const metricasReais = extrairMetricasReaisDoCSV([]);
     
+    // APLICAR VALIDAÇÃO MATEMÁTICA CRÍTICA
+    console.log('🔍 Aplicando validação matemática nas métricas extraídas...');
+    const validacaoMatematica = validarDadosMatematicos(metricasReais);
+    
+    if (!validacaoMatematica.valido) {
+      console.error('❌ ERRO CRÍTICO: Dados matematicamente inválidos detectados!');
+      validacaoMatematica.erros.forEach(erro => console.error(erro));
+    }
+    
+    const reforcoMatematico = `
+🚨 VALIDAÇÃO MATEMÁTICA OBRIGATÓRIA - LEIA ANTES DE ANALISAR:
+
+1. FÓRMULA CORRETA DO ROAS: ROAS = GMV ÷ Investimento (NUNCA INVERTER!)
+2. Se ROAS > 50x: VOCÊ INVERTEU A FÓRMULA! Recalcule imediatamente
+3. Se ROAS < 0.5x: ERRO GRAVE nos dados - verifique os valores
+4. RANGE VÁLIDO: ROAS entre 0.5x e 50x
+
+DADOS PRÉ-VALIDADOS:
+${validacaoMatematica.dadosCalculados.roas ? `- ROAS correto: ${validacaoMatematica.dadosCalculados.roas}x` : '- ROAS: não calculável'}
+${validacaoMatematica.dadosCalculados.cpa ? `- CPA correto: R$ ${validacaoMatematica.dadosCalculados.cpa}` : '- CPA: não calculável'}
+${validacaoMatematica.dadosCalculados.conversao ? `- Conversão correta: ${validacaoMatematica.dadosCalculados.conversao}%` : '- Conversão: não calculável'}
+
+⚠️ AVISOS MATEMÁTICOS:
+${validacaoMatematica.avisos.length > 0 ? validacaoMatematica.avisos.join('\n') : 'Nenhum aviso'}
+
+❌ ERROS CRÍTICOS:
+${validacaoMatematica.erros.length > 0 ? validacaoMatematica.erros.join('\n') : 'Nenhum erro crítico'}
+`;
+    
     const reforco =
       "ATENÇÃO: Utilize apenas os valores reais extraídos das imagens abaixo. NUNCA use valores de exemplo do template. Se não conseguir extrair algum valor, escreva exatamente 'Dado não informado'. NÃO repita exemplos do template sob nenhuma circunstância.";
     
     let basePrompt =
       analysisType === "ads"
-        ? `${ADVANCED_ADS_PROMPT}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`
+        ? `${ADVANCED_ADS_PROMPT}\n\n${reforcoMatematico}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`
         : analysisType === "account"
-          ? `${ADVANCED_ACCOUNT_PROMPT}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`
-          : `${EXPRESS_ACCOUNT_ANALYSIS}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
+          ? `${ADVANCED_ACCOUNT_PROMPT}\n\n${reforcoMatematico}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`
+          : `${EXPRESS_ACCOUNT_ANALYSIS}\n\n${reforcoMatematico}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
 
-    // Adicionar dados pré-calculados ao prompt
+    // Adicionar dados pré-calculados ao prompt (SEM validação dupla)
     basePrompt = gerarPromptComDadosReais(basePrompt, metricasReais);
 
     const imageMessages = images.map((img) => ({
@@ -2416,6 +2562,54 @@ app.post('/test-rcpa-problema', async (req, res) => {
       rcpaRemovido: rcpaRemovido,
       cpaCorreto: cpaCorreto,
       message: 'Teste de correção do RCPA concluído'
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+// NOVO ENDPOINT: Testar validação matemática
+app.post('/test-validacao-matematica', async (req, res) => {
+  try {
+    const { dados } = req.body;
+    
+    if (!dados) {
+      return res.status(400).json({ 
+        error: "Dados são obrigatórios",
+        exemplo: {
+          dados: {
+            gmv: 10000,
+            investimento: 1000,
+            pedidos: 100,
+            visitantes: 5000
+          }
+        }
+      });
+    }
+    
+    console.log('🧪 Testando validação matemática...');
+    console.log('📊 Dados recebidos:', dados);
+    
+    // Aplicar validação matemática
+    const validacao = validarDadosMatematicos(dados);
+    
+    // Calcular ROAS usando a função corrigida
+    const roasInfo = calcularROASCorreto(dados);
+    
+    res.json({
+      success: true,
+      dadosOriginais: dados,
+      validacao: validacao,
+      roasCalculado: roasInfo,
+      message: 'Teste de validação matemática concluído',
+      recomendacao: validacao.valido ? 
+        '✅ Dados matematicamente válidos - pode prosseguir com a análise' :
+        '❌ Dados inválidos - corrija os erros antes de continuar'
     });
 
   } catch (error) {
