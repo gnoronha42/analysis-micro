@@ -156,7 +156,7 @@ async function gerarMensagemExpressOpenAI(dados) {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o",
+      model: "gpt-4.1",
       messages: [
         { 
           role: "system", 
