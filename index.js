@@ -319,6 +319,154 @@ function validarECorrigirDados(dados) {
   return dadosCorrigidos;
 }
 
+// FUNÇÃO CORRIGIDA: Extrair dados precisos do CSV de anúncios
+function extrairDadosCorretosDosAnuncios(csvContent) {
+  console.log('🔍 === EXTRAÇÃO PRECISA DE DADOS DOS ANÚNCIOS ===');
+  
+  if (!csvContent || typeof csvContent !== 'string') {
+    console.error('❌ Conteúdo CSV inválido');
+    return null;
+  }
+  
+  const linhas = csvContent.split('\n').filter(linha => linha.trim());
+  
+  // Encontrar dinamicamente a linha do cabeçalho
+  const headerLineIndex = linhas.findIndex(l => l.includes('Nome do Anúncio') && l.includes('Status'));
+  if (headerLineIndex === -1) {
+    console.error('❌ Cabeçalho não encontrado no CSV');
+    return null;
+  }
+  const headerLine = linhas[headerLineIndex];
+  const headers = headerLine.split(',').map(h => h.trim());
+  console.log('📊 Headers encontrados:', headers.slice(0, 10));
+
+  // Mapear índices das colunas importantes
+  const indices = {
+    nome: headers.findIndex(h => h.includes('Nome do Anúncio')),
+    status: headers.findIndex(h => h.includes('Status')),
+    id: headers.findIndex(h => h.includes('ID do produto')),
+    impressoes: headers.findIndex(h => h.includes('Impressões') && !h.includes('Produto')),
+    cliques: headers.findIndex(h => h.includes('Cliques') && !h.includes('Produto')),
+    ctr: headers.findIndex(h => h.includes('CTR') && !h.includes('Produto')),
+    conversoes: headers.findIndex(h => h.includes('Conversões') && !h.includes('Diretas')),
+    taxaConversao: headers.findIndex(h => h.includes('Taxa de Conversão') && !h.includes('Direta')),
+    itensVendidos: headers.findIndex(h => h.includes('Itens Vendidos') && !h.includes('Diretos')),
+    gmv: headers.findIndex(h => h.includes('GMV')),
+    despesas: headers.findIndex(h => h.includes('Despesas')),
+    roas: headers.findIndex(h => h.includes('ROAS') && !h.includes('Direto'))
+  };
+  
+  console.log('📍 Índices das colunas:', indices);
+  
+  // Extrair dados das campanhas
+  const campanhas = [];
+  let totalInvestimento = 0;
+  let totalGMV = 0;
+  let totalConversoes = 0;
+  let totalImpressoes = 0;
+  let totalCliques = 0;
+  let anunciosAtivos = 0;
+  let anunciosPausados = 0;
+  let anunciosEncerrados = 0;
+  
+  // Processar cada linha de campanha (após o cabeçalho)
+  for (let i = headerLineIndex + 1; i < linhas.length; i++) {
+    const linha = linhas[i];
+    if (!linha.trim()) continue;
+    
+    const campos = linha.split(',');
+    if (campos.length < 10) continue;
+    
+    const campanha = {
+      numero: campos[0],
+      nome: campos[indices.nome] || 'Não informado',
+      status: campos[indices.status] || 'Não informado',
+      id: campos[indices.id] || 'Não informado',
+      impressoes: parseInt(campos[indices.impressoes]?.replace(/\./g, '') || '0'),
+      cliques: parseInt(campos[indices.cliques]?.replace(/\./g, '') || '0'),
+      ctr: parseFloat(campos[indices.ctr]?.replace('%', '').replace(',', '.') || '0'),
+      conversoes: parseInt(campos[indices.conversoes] || '0'),
+      taxaConversao: parseFloat(campos[indices.taxaConversao]?.replace('%', '').replace(',', '.') || '0'),
+      itensVendidos: parseInt(campos[indices.itensVendidos] || '0'),
+      gmv: parseFloat(campos[indices.gmv]?.replace(',', '.') || '0'),
+      despesas: parseFloat(campos[indices.despesas]?.replace(',', '.') || '0'),
+      roas: parseFloat(campos[indices.roas]?.replace(',', '.') || '0')
+    };
+    
+    // Calcular ROAS correto se necessário
+    if (campanha.gmv > 0 && campanha.despesas > 0) {
+      const roasCalculado = campanha.gmv / campanha.despesas;
+      if (Math.abs(campanha.roas - roasCalculado) > 0.1) {
+        console.warn(`⚠️ ROAS recalculado para ${campanha.nome}: ${campanha.roas} → ${roasCalculado.toFixed(2)}`);
+        campanha.roas = roasCalculado;
+      }
+    }
+    
+    campanhas.push(campanha);
+    
+    // Acumular totais
+    totalInvestimento += campanha.despesas;
+    totalGMV += campanha.gmv;
+    totalConversoes += campanha.conversoes;
+    totalImpressoes += campanha.impressoes;
+    totalCliques += campanha.cliques;
+    
+    // Contar status
+    const status = campanha.status.toLowerCase();
+    if (status.includes('andamento') || status.includes('ativo')) {
+      anunciosAtivos++;
+    } else if (status.includes('pausado')) {
+      anunciosPausados++;
+    } else if (status.includes('encerrado')) {
+      anunciosEncerrados++;
+    }
+  }
+  
+  // Calcular métricas consolidadas
+  const roasMedio = totalGMV > 0 && totalInvestimento > 0 ? totalGMV / totalInvestimento : 0;
+  const cpaMedio = totalInvestimento > 0 && totalConversoes > 0 ? totalInvestimento / totalConversoes : 0;
+  const ctrMedio = totalImpressoes > 0 && totalCliques > 0 ? (totalCliques / totalImpressoes) * 100 : 0;
+  const taxaConversaoMedia = totalCliques > 0 && totalConversoes > 0 ? (totalConversoes / totalCliques) * 100 : 0;
+  
+  const resultados = {
+    dadosLoja: {
+      // Extrair dados da loja das primeiras linhas, se existirem
+      nomeUsuario: linhas[1]?.split(',')[1] || 'Não informado',
+      nomeLoja: linhas[2]?.split(',')[1] || 'Não informado',
+      idLoja: linhas[3]?.split(',')[1] || 'Não informado',
+      dataRelatorio: linhas[4]?.split(',')[1] || 'Não informado',
+      periodo: linhas[5]?.split(',')[1] || 'Não informado'
+    },
+    campanhas,
+    resumoConsolidado: {
+      totalCampanhas: campanhas.length,
+      anunciosAtivos,
+      anunciosPausados,
+      anunciosEncerrados,
+      totalInvestimento,
+      totalGMV,
+      totalConversoes,
+      totalImpressoes,
+      totalCliques,
+      roasMedio,
+      cpaMedio,
+      ctrMedio,
+      taxaConversaoMedia,
+      investimentoDiario: totalInvestimento / 31 // Agosto tem 31 dias
+    }
+  };
+  
+  console.log('✅ Dados extraídos com precisão:', {
+    totalCampanhas: campanhas.length,
+    investimentoTotal: totalInvestimento.toFixed(2),
+    gmvTotal: totalGMV.toFixed(2),
+    roasMedio: roasMedio.toFixed(2),
+    status: `${anunciosAtivos} ativas, ${anunciosPausados} pausadas, ${anunciosEncerrados} encerradas`
+  });
+  
+  return resultados;
+}
+
 // Função para extrair métricas dinâmicas dos CSVs reais
 function extrairMetricasReaisDoCSV(csvFiles) {
   console.log('📊 Extraindo métricas dinâmicas dos CSVs...');
@@ -1130,7 +1278,7 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
       const requestBody = {
         model: "gpt-4.1",
         messages,
-        max_tokens: 16000, // Aumentado para análises mais completas
+        max_tokens: 32768, // Aumentado para análises mais completas
         temperature: 0,
         top_p: 1,
       };
@@ -1183,7 +1331,7 @@ async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTex
 
 app.post('/analise', async (req, res) => {
   try {
-    const { images, analysisType, clientName, ocrTexts = [] } = req.body;
+    const { images, analysisType, clientName, ocrTexts = [], csvContent } = req.body;
 
     if (!images || !Array.isArray(images) || images.length === 0) {
       return res.status(400).json({ error: "Imagens são obrigatórias" });
@@ -1192,30 +1340,73 @@ app.post('/analise', async (req, res) => {
       return res.status(400).json({ error: "Tipo de análise inválido" });
     }
 
-    // Extrair métricas reais dos dados disponíveis
-    const metricasReais = extrairMetricasReaisDoCSV([]);
+    // ✅ VERIFICAR SE TEMOS CSV DE ANÚNCIOS PARA USAR DADOS CORRETOS
+    let dadosCorretos = null;
+    let validacaoMatematica = null;
     
-    // APLICAR VALIDAÇÃO MATEMÁTICA CRÍTICA
-    console.log('🔍 Aplicando validação matemática nas métricas extraídas...');
-    const validacaoMatematica = validarDadosMatematicos(metricasReais);
+    if (csvContent && analysisType === "ads") {
+      console.log('🔍 CSV detectado! Usando extração precisa de dados...');
+      dadosCorretos = extrairDadosCorretosDosAnuncios(csvContent);
+      
+      if (dadosCorretos) {
+        console.log('✅ Dados corretos extraídos do CSV:', {
+          investimento: dadosCorretos.resumoConsolidado.totalInvestimento,
+          gmv: dadosCorretos.resumoConsolidado.totalGMV,
+          roas: dadosCorretos.resumoConsolidado.roasMedio
+        });
+        
+        validacaoMatematica = validarDadosMatematicos({
+          gmv: dadosCorretos.resumoConsolidado.totalGMV,
+          investimento: dadosCorretos.resumoConsolidado.totalInvestimento,
+          pedidos: dadosCorretos.resumoConsolidado.totalConversoes,
+          visitantes: 0
+        });
+      }
+    }
+    
+    // ❌ FALLBACK: Usar método antigo se não temos CSV
+    if (!dadosCorretos) {
+      console.log('⚠️ Usando método antigo (sem CSV) - dados podem ser imprecisos');
+      const metricasReais = extrairMetricasReaisDoCSV([]);
+      validacaoMatematica = validarDadosMatematicos(metricasReais);
+    }
     
     if (!validacaoMatematica.valido) {
       console.error('❌ ERRO CRÍTICO: Dados matematicamente inválidos detectados!');
       validacaoMatematica.erros.forEach(erro => console.error(erro));
     }
     
-    const reforcoMatematico = `
+    // ✅ CRIAR REFORÇO MATEMÁTICO COM DADOS CORRETOS
+    const reforcoMatematico = dadosCorretos ? `
+🚨 DADOS CORRETOS EXTRAÍDOS DO CSV - USE EXATAMENTE ESTES VALORES:
+
+**VALIDAÇÃO MATEMÁTICA APLICADA:**
+${validacaoMatematica.valido ? '✅ Dados matematicamente válidos' : '❌ ERROS: ' + validacaoMatematica.erros.join(', ')}
+
+**FÓRMULAS CORRETAS:**
+- ROAS = GMV ÷ Investimento (NUNCA INVERTER!)
+- CPA = Investimento ÷ Conversões
+- CTR = (Cliques ÷ Impressões) × 100
+
+**DADOS CORRETOS DO CSV:**
+- **INVESTIMENTO TOTAL:** R$ ${dadosCorretos.resumoConsolidado.totalInvestimento.toFixed(2)}
+- **GMV TOTAL:** R$ ${dadosCorretos.resumoConsolidado.totalGMV.toFixed(2)}
+- **ROAS MÉDIO CORRETO:** ${dadosCorretos.resumoConsolidado.roasMedio.toFixed(2)}x
+- **CPA MÉDIO CORRETO:** R$ ${dadosCorretos.resumoConsolidado.cpaMedio.toFixed(2)}
+- **CONVERSÕES TOTAIS:** ${dadosCorretos.resumoConsolidado.totalConversoes}
+- **CAMPANHAS:** ${dadosCorretos.resumoConsolidado.anunciosAtivos} ativas, ${dadosCorretos.resumoConsolidado.anunciosPausados} pausadas
+
+🎯 **CLASSIFICAÇÃO AUTOMÁTICA:**
+- ROAS ${dadosCorretos.resumoConsolidado.roasMedio.toFixed(2)}x = ${dadosCorretos.resumoConsolidado.roasMedio >= 8 ? '🟢 EXCELENTE' : dadosCorretos.resumoConsolidado.roasMedio >= 6 ? '🟡 MUITO BOM' : dadosCorretos.resumoConsolidado.roasMedio >= 4 ? '🟠 BOM' : '🔴 CRÍTICO'}
+
+⚠️ IMPORTANTE: Use EXATAMENTE estes valores. NÃO calcule novamente, NÃO inverta fórmulas!
+` : `
 🚨 VALIDAÇÃO MATEMÁTICA OBRIGATÓRIA - LEIA ANTES DE ANALISAR:
 
 1. FÓRMULA CORRETA DO ROAS: ROAS = GMV ÷ Investimento (NUNCA INVERTER!)
 2. Se ROAS > 50x: VOCÊ INVERTEU A FÓRMULA! Recalcule imediatamente
 3. Se ROAS < 0.5x: ERRO GRAVE nos dados - verifique os valores
 4. RANGE VÁLIDO: ROAS entre 0.5x e 50x
-
-DADOS PRÉ-VALIDADOS:
-${validacaoMatematica.dadosCalculados.roas ? `- ROAS correto: ${validacaoMatematica.dadosCalculados.roas}x` : '- ROAS: não calculável'}
-${validacaoMatematica.dadosCalculados.cpa ? `- CPA correto: R$ ${validacaoMatematica.dadosCalculados.cpa}` : '- CPA: não calculável'}
-${validacaoMatematica.dadosCalculados.conversao ? `- Conversão correta: ${validacaoMatematica.dadosCalculados.conversao}%` : '- Conversão: não calculável'}
 
 ⚠️ AVISOS MATEMÁTICOS:
 ${validacaoMatematica.avisos.length > 0 ? validacaoMatematica.avisos.join('\n') : 'Nenhum aviso'}
@@ -1234,8 +1425,11 @@ ${validacaoMatematica.erros.length > 0 ? validacaoMatematica.erros.join('\n') : 
           ? `${ADVANCED_ACCOUNT_PROMPT}\n\n${reforcoMatematico}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`
           : `${EXPRESS_ACCOUNT_ANALYSIS}\n\n${reforcoMatematico}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
 
-    // Adicionar dados pré-calculados ao prompt (SEM validação dupla)
-    basePrompt = gerarPromptComDadosReais(basePrompt, metricasReais);
+    // ✅ NÃO adicionar dados pré-calculados se já temos dados corretos do CSV
+    if (!dadosCorretos) {
+      const metricasReais = extrairMetricasReaisDoCSV([]);
+      basePrompt = gerarPromptComDadosReais(basePrompt, metricasReais);
+    }
 
     const imageMessages = images.map((img) => ({
       type: "image_url",
@@ -1261,6 +1455,15 @@ ${validacaoMatematica.erros.length > 0 ? validacaoMatematica.erros.join('\n') : 
       analysisType,
       clientName: clientName || "Cliente",
       timestamp: new Date().toISOString(),
+      dadosCorretos: dadosCorretos ? {
+        investimentoTotal: dadosCorretos.resumoConsolidado.totalInvestimento,
+        gmvTotal: dadosCorretos.resumoConsolidado.totalGMV,
+        roasMedio: dadosCorretos.resumoConsolidado.roasMedio,
+        cpaMedio: dadosCorretos.resumoConsolidado.cpaMedio,
+        totalCampanhas: dadosCorretos.resumoConsolidado.totalCampanhas,
+        status: `${dadosCorretos.resumoConsolidado.anunciosAtivos} ativas, ${dadosCorretos.resumoConsolidado.anunciosPausados} pausadas`,
+        fonteDados: 'CSV_PRECISO'
+      } : { fonteDados: 'IMAGENS_APENAS' }
     });
   } catch (error) {
     res.status(500).json({
@@ -1286,45 +1489,97 @@ app.post('/analise-csv', async (req, res) => {
       return res.status(400).json({ error: "Tipo de análise deve ser 'ads' ou 'account'" });
     }
 
-    // Análise de ADS (código existente)
+    // Análise de ADS (CORRIGIDA)
     if (analysisType === "ads") {
       if (!csvContent || typeof csvContent !== 'string') {
         return res.status(400).json({ error: "Conteúdo CSV é obrigatório para análise de ads" });
       }
 
-      // Processar CSV de ads (código existente)
+      // USAR NOVA FUNÇÃO DE EXTRAÇÃO PRECISA
+      const dadosCorretos = extrairDadosCorretosDosAnuncios(csvContent);
+      
+      if (!dadosCorretos) {
+        return res.status(400).json({ 
+          error: "Erro ao processar CSV de anúncios",
+          details: "Verifique se o formato do CSV está correto"
+        });
+      }
+
+      // APLICAR VALIDAÇÃO MATEMÁTICA CRÍTICA
+      const validacao = validarDadosMatematicos({
+        gmv: dadosCorretos.resumoConsolidado.totalGMV,
+        investimento: dadosCorretos.resumoConsolidado.totalInvestimento,
+        pedidos: dadosCorretos.resumoConsolidado.totalConversoes,
+        visitantes: 0 // Não disponível em CSV de anúncios
+      });
+
+      if (!validacao.valido) {
+        console.error('❌ DADOS CSV MATEMATICAMENTE INVÁLIDOS:', validacao.erros);
+      }
+
+      // Processar CSV de ads (MANTENDO COMPATIBILIDADE)
       const dadosProcessados = processarCSVAnuncios(csvContent);
       const insights = gerarInsightsCSV(dadosProcessados);
       
-      // Criar prompt específico para CSV com dados estruturados (código existente)
+      // CRIAR PROMPT COM DADOS CORRETOS EXTRAÍDOS
       const csvPrompt = `${ADVANCED_ADS_PROMPT}
 
-🚨 ANÁLISE BASEADA EM DADOS CSV ESTRUTURADOS - SHOPEE ADS 🚨
+🚨 ANÁLISE BASEADA EM DADOS CSV CORRETOS - SHOPEE ADS 🚨
 
-⚠️ INSTRUÇÕES CRÍTICAS - LEIA PRIMEIRO:
+🔍 VALIDAÇÃO MATEMÁTICA APLICADA:
+${validacao.valido ? '✅ Dados matematicamente válidos' : '❌ ERROS DETECTADOS: ' + validacao.erros.join(', ')}
+
+⚠️ INSTRUÇÕES CRÍTICAS - USE ESTES DADOS EXATOS:
 1. **NUNCA INVERTA OS VALORES**: Despesas = Investimento | GMV = Receita
-2. **VALIDAÇÃO OBRIGATÓRIA**: Se ROAS > 50x, há erro de interpretação
-3. **INTERPRETAÇÃO CORRETA**: ROAS = GMV ÷ Despesas (use valores corretos)
-4. **EXEMPLO REAL**: Despesas R$ 1.543,25 + GMV R$ 11.001,02 = ROAS 7,13x (CORRETO)
-5. **JAMAIS DIGA**: "ROAS 1.543,25x" (isso seria impossível - é o valor das despesas!)
+2. **FÓRMULA CORRETA**: ROAS = GMV ÷ Despesas (NUNCA INVERTER!)
+3. **DADOS PRÉ-VALIDADOS**: Use exatamente os valores abaixo
 
-**DADOS DA LOJA:**
-- Nome da Loja: ${insights.dadosLoja.nomeLoja}
-- Nome de Usuário: ${insights.dadosLoja.nomeUsuario}
-- ID da Loja: ${insights.dadosLoja.idLoja}
-- Período do Relatório: ${insights.dadosLoja.periodo}
-- Data de Criação: ${insights.dadosLoja.dataRelatorio}
+**DADOS CORRETOS DA LOJA:**
+- Nome da Loja: ${dadosCorretos.dadosLoja.nomeLoja}
+- Nome de Usuário: ${dadosCorretos.dadosLoja.nomeUsuario}
+- ID da Loja: ${dadosCorretos.dadosLoja.idLoja}
+- Período: ${dadosCorretos.dadosLoja.periodo}
+- Data do Relatório: ${dadosCorretos.dadosLoja.dataRelatorio}
 
-**RESUMO GERAL VALIDADO:**
-- Total de Anúncios: ${insights.resumoGeral.totalAnuncios}
-- Anúncios Ativos: ${insights.resumoGeral.anunciosAtivos}
-- Anúncios Pausados: ${insights.resumoGeral.anunciosPausados}
-- Anúncios Encerrados: ${insights.resumoGeral.anunciosEncerrados}
-- **INVESTIMENTO TOTAL**: R$ ${insights.resumoGeral.totalDespesas.toFixed(2)}
-- **RECEITA TOTAL (GMV)**: R$ ${insights.resumoGeral.totalGMV.toFixed(2)}
-- **ROAS GERAL CORRETO**: ${insights.resumoGeral.roasGeral}x
-- **CONVERSÕES TOTAIS**: ${insights.resumoGeral.totalConversoes}
-- **CPA MÉDIO**: R$ ${insights.resumoGeral.cpaMedio}
+**RESUMO CONSOLIDADO CORRETO:**
+- Total de Campanhas: ${dadosCorretos.resumoConsolidado.totalCampanhas}
+- Campanhas Ativas: ${dadosCorretos.resumoConsolidado.anunciosAtivos}
+- Campanhas Pausadas: ${dadosCorretos.resumoConsolidado.anunciosPausados}
+- Campanhas Encerradas: ${dadosCorretos.resumoConsolidado.anunciosEncerrados}
+- **INVESTIMENTO TOTAL CORRETO**: R$ ${dadosCorretos.resumoConsolidado.totalInvestimento.toFixed(2)}
+- **GMV TOTAL CORRETO**: R$ ${dadosCorretos.resumoConsolidado.totalGMV.toFixed(2)}
+- **ROAS MÉDIO CORRETO**: ${dadosCorretos.resumoConsolidado.roasMedio.toFixed(2)}x
+- **CONVERSÕES TOTAIS**: ${dadosCorretos.resumoConsolidado.totalConversoes}
+- **CPA MÉDIO CORRETO**: R$ ${dadosCorretos.resumoConsolidado.cpaMedio.toFixed(2)}
+- **CTR MÉDIO**: ${dadosCorretos.resumoConsolidado.ctrMedio.toFixed(2)}%
+- **INVESTIMENTO DIÁRIO**: R$ ${dadosCorretos.resumoConsolidado.investimentoDiario.toFixed(2)}
+
+🎯 **CLASSIFICAÇÃO AUTOMÁTICA:**
+- ROAS ${dadosCorretos.resumoConsolidado.roasMedio.toFixed(2)}x = ${dadosCorretos.resumoConsolidado.roasMedio >= 8 ? '🟢 EXCELENTE' : dadosCorretos.resumoConsolidado.roasMedio >= 6 ? '🟡 MUITO BOM' : dadosCorretos.resumoConsolidado.roasMedio >= 4 ? '🟠 BOM' : '🔴 CRÍTICO'}
+- Conta classificada como: ${dadosCorretos.resumoConsolidado.roasMedio >= 8 ? 'ESCALÁVEL' : dadosCorretos.resumoConsolidado.roasMedio >= 6 ? 'RENTÁVEL' : dadosCorretos.resumoConsolidado.roasMedio >= 4 ? 'OTIMIZAÇÃO' : 'REESTRUTURAÇÃO'}
+
+**PRODUTOS PRINCIPAIS COM CLASSIFICAÇÃO CORRETA:**
+${dadosCorretos.campanhas.slice(0, 10).map((campanha, i) => {
+  const classificacaoROAS = campanha.roas >= 8 ? '🟢 EXCELENTE (≥8x)' : 
+                           campanha.roas >= 6 ? '🟡 MUITO BOM (6-8x)' : 
+                           campanha.roas >= 4 ? '🟠 BOM (4-6x)' : 
+                           campanha.roas >= 2 ? '🟡 REGULAR (2-4x)' : '🔴 CRÍTICO (<2x)';
+  
+  const classificacaoCTR = campanha.ctr >= 2.5 ? '🟢 EXCELENTE (≥2,5%)' :
+                          campanha.ctr >= 1.5 ? '🟡 BOM (1,5-2,5%)' : '🔴 CRÍTICO (<1,5%)';
+  
+  return `${i+1}. ${campanha.nome}
+     - Status: ${campanha.status}
+     - ID: ${campanha.id}
+     - **INVESTIMENTO**: R$ ${campanha.despesas.toFixed(2)}
+     - **GMV**: R$ ${campanha.gmv.toFixed(2)}
+     - **ROAS**: ${campanha.roas.toFixed(2)}x ${classificacaoROAS}
+     - **CTR**: ${campanha.ctr.toFixed(2)}% ${classificacaoCTR}
+     - Conversões: ${campanha.conversoes}
+     - Taxa Conversão: ${campanha.taxaConversao.toFixed(2)}%
+     - Impressões: ${campanha.impressoes.toLocaleString('pt-BR')}
+     - Cliques: ${campanha.cliques.toLocaleString('pt-BR')}`;
+}).join('\n\n')}
 
 🔍 **VALIDAÇÃO DOS DADOS:**
 - Se ROAS geral = ${insights.resumoGeral.roasGeral}x e é > 4x → CONTA SAUDÁVEL
@@ -2191,7 +2446,7 @@ app.post('/analise-csv-bypass', async (req, res) => {
             content: promptBypass
           }
         ],
-        max_tokens: 4000,
+        max_tokens: 32768,
         temperature: 0.1
       })
     });
@@ -2278,7 +2533,7 @@ app.post('/analise-csv-robusta', async (req, res) => {
             content: promptRobusta
           }
         ],
-        max_tokens: 4000,
+        max_tokens: 32768,
         temperature: 0.1
       })
     });
@@ -2562,6 +2817,180 @@ app.post('/test-rcpa-problema', async (req, res) => {
       rcpaRemovido: rcpaRemovido,
       cpaCorreto: cpaCorreto,
       message: 'Teste de correção do RCPA concluído'
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+// NOVO ENDPOINT: Testar extração correta de dados CSV
+app.post('/test-extracao-csv-correta', async (req, res) => {
+  try {
+    const { csvContent } = req.body;
+    
+    if (!csvContent) {
+      return res.status(400).json({ 
+        error: "Conteúdo CSV é obrigatório",
+        exemplo: "Envie o conteúdo do CSV como string no campo 'csvContent'"
+      });
+    }
+    
+    console.log('🧪 Testando extração correta de dados CSV...');
+    console.log('📄 CSV recebido (primeiros 200 chars):', csvContent.substring(0, 200));
+    
+    // Aplicar nova função de extração
+    const dadosCorretos = extrairDadosCorretosDosAnuncios(csvContent);
+    
+    if (!dadosCorretos) {
+      return res.json({
+        success: false,
+        error: 'Falha na extração de dados',
+        message: 'CSV malformado ou formato incorreto'
+      });
+    }
+    
+    // Aplicar validação matemática
+    const validacao = validarDadosMatematicos({
+      gmv: dadosCorretos.resumoConsolidado.totalGMV,
+      investimento: dadosCorretos.resumoConsolidado.totalInvestimento,
+      pedidos: dadosCorretos.resumoConsolidado.totalConversoes,
+      visitantes: 0
+    });
+    
+    res.json({
+      success: true,
+      dadosExtraidos: {
+        loja: dadosCorretos.dadosLoja,
+        totalCampanhas: dadosCorretos.resumoConsolidado.totalCampanhas,
+        investimentoTotal: dadosCorretos.resumoConsolidado.totalInvestimento,
+        gmvTotal: dadosCorretos.resumoConsolidado.totalGMV,
+        roasMedio: dadosCorretos.resumoConsolidado.roasMedio,
+        cpaMedio: dadosCorretos.resumoConsolidado.cpaMedio,
+        investimentoDiario: dadosCorretos.resumoConsolidado.investimentoDiario,
+        status: `${dadosCorretos.resumoConsolidado.anunciosAtivos} ativas, ${dadosCorretos.resumoConsolidado.anunciosPausados} pausadas`
+      },
+      validacaoMatematica: validacao,
+      top5Produtos: dadosCorretos.campanhas.slice(0, 5).map(c => ({
+        nome: c.nome,
+        roas: c.roas,
+        gmv: c.gmv,
+        despesas: c.despesas,
+        status: c.status,
+        classificacao: c.roas >= 8 ? 'EXCELENTE' : c.roas >= 6 ? 'MUITO BOM' : c.roas >= 4 ? 'BOM' : 'REGULAR/CRÍTICO'
+      })),
+      message: 'Extração de dados CSV testada com sucesso!'
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+// NOVO ENDPOINT: Testar análise com CSV correto
+app.post('/test-analise-correta', async (req, res) => {
+  try {
+    const { csvContent, analysisType = "ads" } = req.body;
+    
+    if (!csvContent) {
+      return res.status(400).json({ 
+        error: "Conteúdo CSV é obrigatório",
+        exemplo: "Envie o CSV como string no campo 'csvContent'"
+      });
+    }
+    
+    console.log('🧪 Testando análise com dados corretos...');
+    console.log('📄 CSV recebido (primeiros 200 chars):', csvContent.substring(0, 200));
+    
+    // Simular chamada da rota /analise com CSV
+    const mockRequest = {
+      body: {
+        images: ["data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAAAAAAAD/"], // Imagem fake
+        analysisType,
+        clientName: "Teste",
+        csvContent
+      }
+    };
+    
+    // Aplicar extração correta
+    const dadosCorretos = extrairDadosCorretosDosAnuncios(csvContent);
+    
+    if (!dadosCorretos) {
+      return res.json({
+        success: false,
+        error: 'Falha na extração de dados',
+        message: 'CSV malformado ou formato incorreto'
+      });
+    }
+    
+    // Aplicar validação matemática
+    const validacao = validarDadosMatematicos({
+      gmv: dadosCorretos.resumoConsolidado.totalGMV,
+      investimento: dadosCorretos.resumoConsolidado.totalInvestimento,
+      pedidos: dadosCorretos.resumoConsolidado.totalConversoes,
+      visitantes: 0
+    });
+    
+    // Gerar prompt correto
+    const reforcoMatematico = `
+🚨 DADOS CORRETOS EXTRAÍDOS DO CSV - USE EXATAMENTE ESTES VALORES:
+
+**VALIDAÇÃO MATEMÁTICA APLICADA:**
+${validacao.valido ? '✅ Dados matematicamente válidos' : '❌ ERROS: ' + validacao.erros.join(', ')}
+
+**DADOS CORRETOS DO CSV:**
+- **INVESTIMENTO TOTAL:** R$ ${dadosCorretos.resumoConsolidado.totalInvestimento.toFixed(2)}
+- **GMV TOTAL:** R$ ${dadosCorretos.resumoConsolidado.totalGMV.toFixed(2)}
+- **ROAS MÉDIO CORRETO:** ${dadosCorretos.resumoConsolidado.roasMedio.toFixed(2)}x
+- **CPA MÉDIO CORRETO:** R$ ${dadosCorretos.resumoConsolidado.cpaMedio.toFixed(2)}
+- **CONVERSÕES TOTAIS:** ${dadosCorretos.resumoConsolidado.totalConversoes}
+- **CAMPANHAS:** ${dadosCorretos.resumoConsolidado.anunciosAtivos} ativas, ${dadosCorretos.resumoConsolidado.anunciosPausados} pausadas
+
+🎯 **CLASSIFICAÇÃO AUTOMÁTICA:**
+- ROAS ${dadosCorretos.resumoConsolidado.roasMedio.toFixed(2)}x = ${dadosCorretos.resumoConsolidado.roasMedio >= 8 ? '🟢 EXCELENTE' : dadosCorretos.resumoConsolidado.roasMedio >= 6 ? '🟡 MUITO BOM' : dadosCorretos.resumoConsolidado.roasMedio >= 4 ? '🟠 BOM' : '🔴 CRÍTICO'}
+
+⚠️ IMPORTANTE: Use EXATAMENTE estes valores. NÃO calcule novamente, NÃO inverta fórmulas!
+`;
+
+    res.json({
+      success: true,
+      message: 'Análise com dados corretos testada!',
+      dadosCorretos: {
+        loja: dadosCorretos.dadosLoja,
+        investimentoTotal: dadosCorretos.resumoConsolidado.totalInvestimento,
+        gmvTotal: dadosCorretos.resumoConsolidado.totalGMV,
+        roasMedio: dadosCorretos.resumoConsolidado.roasMedio,
+        cpaMedio: dadosCorretos.resumoConsolidado.cpaMedio,
+        totalCampanhas: dadosCorretos.resumoConsolidado.totalCampanhas,
+        status: `${dadosCorretos.resumoConsolidado.anunciosAtivos} ativas, ${dadosCorretos.resumoConsolidado.anunciosPausados} pausadas`
+      },
+      validacao,
+      promptGerado: reforcoMatematico,
+      comparacao: {
+        correto: {
+          investimento: dadosCorretos.resumoConsolidado.totalInvestimento,
+          roas: dadosCorretos.resumoConsolidado.roasMedio,
+          cpa: dadosCorretos.resumoConsolidado.cpaMedio
+        },
+        seusResultados: {
+          investimento: 11113.90,
+          roas: 6.44,
+          cpa: 5.97
+        },
+        diferencas: {
+          investimento: `${((11113.90 - dadosCorretos.resumoConsolidado.totalInvestimento) / dadosCorretos.resumoConsolidado.totalInvestimento * 100).toFixed(1)}% a mais`,
+          roas: `${((6.44 - dadosCorretos.resumoConsolidado.roasMedio) / dadosCorretos.resumoConsolidado.roasMedio * 100).toFixed(1)}% menor`,
+          cpa: `${((5.97 - dadosCorretos.resumoConsolidado.cpaMedio) / dadosCorretos.resumoConsolidado.cpaMedio * 100).toFixed(1)}% maior`
+        }
+      }
     });
 
   } catch (error) {

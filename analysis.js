@@ -165,10 +165,11 @@ Esse comportamento é mandatório e faz parte da estrutura fixa do relatório.
 ## 📉 FAIXAS DE DISPARO AUTOMÁTICO:
 
 **ROAS:**  
-- ROAS CRÍTICO → ROAS < 5x  
-- ROAS BAIXO → 5x ≤ ROAS < 8x  
-- ROAS BOM → 8x ≤ ROAS < 12x  
-- ROAS EXCELENTE → ROAS ≥ 12x
+- ROAS CRÍTICO → ROAS < 2x  
+- ROAS REGULAR → 2x ≤ ROAS < 4x
+- ROAS BOM → 4x ≤ ROAS < 6x
+- ROAS MUITO BOM → 6x ≤ ROAS < 8x  
+- ROAS EXCELENTE → ROAS ≥ 8x
 
 **CTR:**  
 - CTR CRÍTICO → CTR < 1,5%  
@@ -190,21 +191,25 @@ Nunca agrupar SKUs. Nunca omitir o bloco. Nunca condicionar ao comando do usuár
 # 📊 ANÁLISE ESTRATÉGICA POR INDICADOR – ROAS E CTR
 
 ROAS  
-ROAS CRÍTICO (< 5x)  
-* Produto: O desempenho é um sinal de alerta, a ficha de produto (descrição e fotos) precisa de uma revisão profunda e o preço deve ser reavaliado para não causar prejuízo.  
-* Ads: Pausar imediatamente as campanhas/itens com esse ROAS para evitar perdas e redistribuir o orçamento para os itens que estão performando melhor.
+ROAS CRÍTICO (< 2x)  
+* Produto: ALERTA VERMELHO! Você está perdendo dinheiro. Pausar imediatamente e revisar completamente produto, preço e estratégia.  
+* Ads: PAUSAR IMEDIATAMENTE! Redistribuir todo o orçamento para campanhas lucrativas.
 
-ROAS BAIXO (5x ≤ ROAS < 8x)  
-* Produto: Focar na otimização da página de produto (melhores descrições e fotos para aumentar a conversão) e recalcular o preço para ficar mais competitivo sem perder margem.  
-* Ads: Testar novos criativos com benefício claro e definir uma Meta de ROAS intermediária para equilibrar volume e rentabilidade.
+ROAS REGULAR (2x ≤ ROAS < 4x)  
+* Produto: Revisar completamente ficha de produto, preço e estratégia. Performance abaixo do esperado.  
+* Ads: Reduzir orçamento, testar novos criativos e considerar pausar se não melhorar em 7 dias.
 
-ROAS BOM (8x ≤ ROAS < 12x)  
-* Produto: Garantir o estoque dos SKUs vencedores para evitar ruptura e replicar o SKU vencedor em variações (cor, tamanho, kit) para expandir o sucesso.  
-* Ads: Escalar orçamento entre +10–20% ao dia, monitorando de perto o CPA e o ROAS para manter a rentabilidade e expandir o público com campanhas remarketing (transmissão via chat).
+ROAS BOM (4x ≤ ROAS < 6x)  
+* Produto: Otimizar página de produto (descrições e fotos) e ajustar preço para melhor competitividade.  
+* Ads: Manter orçamento atual, testar criativos com benefícios claros.
 
-ROAS EXCELENTE (ROAS ≥ 12x)  
-* Produto: A meta é a máxima escalabilidade. Criar ofertas de upsell ou cross-sell e confirmar se o seu estoque suporta o aumento da demanda.  
-* Ads: Aumentar o orçamento de forma mais agressiva, pois a campanha está pronta para escalar e gerar o máximo de lucro.
+ROAS MUITO BOM (6x ≤ ROAS < 8x)  
+* Produto: Garantir estoque e considerar variações do produto vencedor.  
+* Ads: Testar aumento gradual de orçamento (+10% ao dia), monitorar CPA.
+
+ROAS EXCELENTE (ROAS ≥ 8x)  
+* Produto: Máxima escalabilidade! Garantir estoque robusto e criar variações/combos.  
+* Ads: Escalar orçamento agressivamente (+20-30% ao dia), este é seu produto estrela!
 
 ---
 
@@ -844,16 +849,30 @@ TOTAL
 ⸻
 
 📈 PROJEÇÃO REALISTA E PROBLEMAS IDENTIFICADOS
-	•	Sempre ligar o problema a uma projeção numérica de ganho em R$:
-* Ticket médio: “Hoje é R$ [X]. Se subir 20% (R$ [X+20%]), gera +R$ [VALOR] sem novos clientes.”
-* Conversão: “Com taxa atual [X]%, precisa de [N] visitantes para gerar [M] pedidos. Se subir para [Y]%, seriam +[PEDIDOS] pedidos/mês (+R$ [VALOR]).”
-* ROAS: “Hoje é [X]x. Se escalar orçamento em 30% mantendo eficiência, gera +R$ [VALOR].”
-	•	Se a métrica estiver saudável, mostrar reforço:
-* Conversão saudável: “Sua conversão está acima da média. O próximo passo é manter consistência e trabalhar ticket médio.”
-* Ticket médio saudável: “Seu ticket está sólido. Agora o foco deve ser aumentar pedidos com mais tráfego.”
-* ROAS saudável: “Seu retorno é positivo. A meta agora é garantir estoque e escalar anúncios sem perder eficiência.”
-	•	Nunca repetir a sugestão já dada no diagnóstico; aqui é apenas projeção.
-	•	Proibido usar termos vagos como “pode crescer bastante” ou “há espaço para melhorar”.
+
+Nesta seção, sempre gerar 3 projeções (Ticket Médio, Conversão e Ads).
+Use os dados recebidos para calcular os valores.
+Nunca deixe frases genéricas. Sempre mostrar os números exatos.
+	•	Ticket médio:
+Calcule o ticket médio (Faturamento ÷ Pedidos).
+Imprima no formato:
+“Hoje seu ticket médio é R$ [Ticket_Médio].
+Se estivesse em R$ [Ticket_Médio × 1,2], você faturaria +R$ [(Ticket_Médio × 0,2) × Pedidos] com a mesma quantidade de pedidos.
+Isso mostra que está vendendo bem, mas lucrando pouco.”
+	•	Conversão:
+Calcule a conversão = (Pedidos ÷ Visitantes) × 100.
+Imprima no formato:
+“Com sua taxa atual de [Conversão]%, você precisa de [Visitantes ÷ Pedidos] visitantes para gerar 1 pedido.
+Se corrigir precificação/ficha de produto e subir para [min(Conversão × 1,5, 2,5)]%, seriam +[(Visitantes × (min(Conversão × 1,5, 2,5) – Conversão) ÷ 100)] pedidos/mês sem gastar mais em tráfego.”
+	•	Ads:
+	•	Se ROAS < 8x:
+“Seu ROAS está em [ROAS]x, abaixo do benchmark de 8x.
+Antes de pensar em escalar, o foco deve ser aumentar eficiência.
+Ajustes em ficha de produto, precificação e segmentação de anúncios podem elevar esse retorno.
+Cada ponto a mais de ROAS significa mais vendas sem aumentar investimento.”
+	•	Se ROAS ≥ 8x:
+“Seu ROAS é [ROAS]x, dentro de um nível saudável.
+Mantendo essa eficiência e escalando anúncios em +[percentual progressivo entre 10% e 30%, definido de acordo com o investimento], você poderia adicionar +R$ [(Investimento_Ads × percentual_escala) × ROAS] em faturamento, com segurança para preservar margem.”
 
 ---
 
