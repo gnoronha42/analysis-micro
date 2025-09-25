@@ -575,11 +575,18 @@ router.post('/whatsapp-express', async (req, res) => {
     const resultado = await enviarMensagemParaWhatsapp(telefone, analise, nome);
     
     console.log('✅ Processo concluído com sucesso!');
+    console.log('📋 Retornando para frontend:', {
+      success: true,
+      preview_size: analise.substring(0, 200).length,
+      relatorio_size: analise.length
+    });
+    
     return res.json({ 
       success: true, 
       mensagem: 'Análise enviada com sucesso para o WhatsApp!', 
       resultado,
-      preview: analise.substring(0, 200) + '...'
+      preview: analise, // Retornar o relatório completo no preview também
+      relatorio: analise // Incluir o relatório completo para permitir redirecionamento
     });
   } catch (error) {
     console.error('❌ Erro no processamento:', error);
