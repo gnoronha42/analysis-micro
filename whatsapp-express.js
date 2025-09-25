@@ -140,7 +140,7 @@ async function gerarMensagemExpressOpenAI(dados) {
 - Visitantes: ${dados.visitantes} 
 - Pedidos: ${dados.pedidos}
 - Investimento Shopee Ads: R$ ${dados.investimentoAds}
-- ROAS Mensal: ${dados.roasValido}x
+- ROAS Mensal: ${dados.roasMensal}x
 - Conversão: ${dados.conversao}% (a cada 100 pessoas, ${Math.round(dados.conversao)} compram)
 - Ticket Médio: R$ ${dados.ticketMedio}
 - Maior desafio: ${dados.desafio}`;
@@ -156,26 +156,25 @@ async function gerarMensagemExpressOpenAI(dados) {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "gpt-4.1",
+      model: "gpt-4o",
       messages: [
         { 
           role: "system", 
           content: `Você é um consultor sênior de Shopee Ads do EFEITO VENDAS. 
+            INSTRUÇÕES ESPECÍFICAS:
+            1. Use EXATAMENTE os dados fornecidos - NUNCA invente valores
+            2. Gere apenas o mini-relatório do prompt
+            3. Faça TODOS os cálculos conforme as regras definidas no prompt
+            4. Use os selos e classificações exatas conforme o prompt
+            5. Seja técnico, objetivo e focado em conversão para assinatura
+            6. NÃO gere as mensagens de WhatsApp, apenas o mini-relatório
 
-INSTRUÇÕES ESPECÍFICAS:
-1. Use EXATAMENTE os dados fornecidos - NUNCA invente valores
-2. Gere apenas o mini-relatório do prompt
-3. Faça TODOS os cálculos conforme as regras definidas no prompt
-4. Use os selos e classificações exatas conforme o prompt
-5. Seja técnico, objetivo e focado em conversão para assinatura
-6. NÃO gere as mensagens de WhatsApp, apenas o mini-relatório
-
-IMPORTANTE: Execute todos os cálculos matemáticos conforme especificado no prompt antes de gerar o relatório.` 
+            IMPORTANTE: Execute todos os cálculos matemáticos conforme especificado no prompt antes de gerar o relatório.` 
         },
         { role: "user", content: promptFinal },
       ],
-      max_tokens: 2500,
-      temperature: 0.1,
+      max_tokens: 14500,
+      
     }),
   });
 
