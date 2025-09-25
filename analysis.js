@@ -886,20 +886,22 @@ Ela mostra o lucro líquido real de cada item já considerando taxas, comissão 
 
 ## 🚀 O PRÓXIMO NÍVEL DA SUA LOJA
 
-“Toda essa análise é só uma amostra — cerca de 15% do que conseguimos mapear da sua loja ”  
+“Toda essa análise é só uma amostra — cerca de 15% do que conseguimos mapear da sua loja.”  
 
 ---
 
 ## 🎯 INTELIGÊNCIA SEMANAL – SELLERIA
 
-Já pensou receber semanalmente:
+Já pensou receber semanalmente <- (esse texto é obrigatório):
 ✅ Diagnóstico de 47 métricas da sua loja.
 ✅ Sugestões práticas e baseada nas suas métricas para aumentar pedidos e faturamento. 
 ✅ Relatório detalhado de evolução mensal. 
 ✅ Direcionamento estratégico para escalar vendas e otimizar investimento em Shopee Ads.
 ✅ Acesso gratuito à Calculadora Inteligente Shopee — saiba exatamente quanto sobra em cada venda e descubra qual é o preço mínimo para não ter prejuízo.
 
-🔗 [Clique aqui e conheça a Inteligência Semanal](https://consultoriaefeitovendas.com.br/seller-ia/)  
+Isso é o que a SellerIA pode fazer pela sua loja! 
+Clique aqui👇🏼 e saiba mais 🚀🚀
+🔗 🔗 https://consultoriaefeitovendas.com.br/seller-ia/
 
 ---
 
