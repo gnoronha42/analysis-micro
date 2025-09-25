@@ -892,19 +892,18 @@ E essa é só uma parte da visão completa: porque entender sua margem é o prim
 
 ## 🚀 O PRÓXIMO NÍVEL DA SUA LOJA
 
-“Toda essa análise é só uma amostra — cerca de 15% do que conseguimos mapear.  
-Com acompanhamento semanal, você enxerga quais produtos puxar, quando escalar Ads com segurança e como proteger sua margem com precificação correta.”  
+“Toda essa análise é só uma amostra — cerca de 15% do que conseguimos mapear da sua loja ”  
 
 ---
 
 ## 🎯 INTELIGÊNCIA SEMANAL – SELLERIA
 
-O que você recebe ao ativar a Inteligência Semanal:  
-✅ Diagnóstico de 47 métricas atualizado toda semana  
-✅ Sugestões práticas para aumentar pedidos e faturamento  
-✅ Relatório de evolução mensal  
-✅ Direcionamento estratégico para escalar anúncios  
-✅ Acesso gratuito à *Calculadora Inteligente Shopee* — saiba exatamente quanto sobra em cada venda e descubra qual é o preço mínimo para não ter prejuízo  
+Já pensou receber semanalmente:
+✅ Diagnóstico de 47 métricas da sua loja.
+✅ Sugestões práticas e baseada nas suas métricas para aumentar pedidos e faturamento. 
+✅ Relatório detalhado de evolução mensal. 
+✅ Direcionamento estratégico para escalar vendas e otimizar investimento em Shopee Ads.
+✅ Acesso gratuito à Calculadora Inteligente Shopee — saiba exatamente quanto sobra em cada venda e descubra qual é o preço mínimo para não ter prejuízo.
 
 🔗 [Clique aqui e conheça a Inteligência Semanal](https://consultoriaefeitovendas.com.br/seller-ia/)  
 
