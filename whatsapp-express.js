@@ -545,6 +545,8 @@ function formatarPadraoWhatsApp(texto, nome) {
 router.post('/whatsapp-express', async (req, res) => {
   try {
     console.log('🚀 Iniciando processamento da análise express...');
+    console.log('🌐 Origin da requisição:', req.headers.origin);
+    console.log('🔍 Headers da requisição:', JSON.stringify(req.headers, null, 2));
     console.log('📊 Dados recebidos:', JSON.stringify(req.body, null, 2));
 
     const { nome, email, telefone, faturamento30d, visitantes, pedidos, investimentoAds, roasMensal, desafio } = req.body;

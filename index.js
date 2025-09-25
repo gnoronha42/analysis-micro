@@ -1015,6 +1015,9 @@ const corsOptions = {
   origin: [
     'https://shoppe-ai-9px3.vercel.app',
     'https://www.selleria.com.br',
+    'https://selleria.com.br',
+    'http://www.selleria.com.br',
+    'http://selleria.com.br',
     'http://localhost:3000',
     'http://localhost:3001',
     'https://localhost:3000',
@@ -1038,13 +1041,32 @@ app.use((req, res, next) => {
 
 // Middleware adicional para headers CORS em todas as respostas
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'https://shoppe-ai-9px3.vercel.app',
+    'https://www.selleria.com.br',
+    'https://selleria.com.br',
+    'http://www.selleria.com.br',
+    'http://selleria.com.br',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://localhost:3000'
+  ];
+  
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept');
   res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // Cache preflight por 24h
   
   // Responde imediatamente para requisições OPTIONS (preflight)
   if (req.method === 'OPTIONS') {
+    console.log('✅ Preflight OPTIONS request from:', origin);
     res.status(200).end();
     return;
   }
@@ -3695,6 +3717,17 @@ function extrairKpisDoTexto(texto) {
 }  
   //whatsapp-express.js
 const whatsappExpressRouter = require('./whatsapp-express');
+
+// Adicionar handler específico para OPTIONS na rota whatsapp-express
+app.options('/api/whatsapp-express', (req, res) => {
+  console.log('✅ OPTIONS preflight para /api/whatsapp-express');
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
+
 app.use('/api', whatsappExpressRouter);
 
 // Middleware global de tratamento de erros
