@@ -878,16 +878,10 @@ Mantendo essa eficiência e escalando anúncios em +[percentual progressivo entr
 
 ## 💡 FERRAMENTA QUE PODE TE AJUDAR
 
-“Quando olha para seus números, já se perguntou se está realmente ganhando em cada venda ou se alguma delas pode estar saindo no prejuízo sem você perceber?  
+“Quando olha para seus números, já se perguntou se está realmente ganhando em cada venda ou se alguma delas pode estar saindo no prejuízo sem você perceber? 
 
-Essa é, de longe, a dúvida mais comum entre vendedores da Shopee — e a verdade é que sem esse cálculo, todo o restante da estratégia pode perder sentido.  
-
- Você já usa a Calculadora Inteligente Shopee.  
-Ela mostra o lucro líquido real de cada item já considerando taxas, comissão e frete, e revela o preço mínimo de venda para não trabalhar no vermelho.  
-
-Na prática, ela te dá a clareza que falta para responder à pergunta que todo vendedor faz em silêncio: ‘estou realmente lucrando ou só vendo números subindo na tela?’  
-
-E essa é só uma parte da visão completa: porque entender sua margem é o primeiro passo, mas manter esse controle toda semana é o que realmente muda o jogo.”
+Você já usa a Calculadora Inteligente Shopee. 
+Ela mostra o lucro líquido real de cada item já considerando taxas, comissão e frete, e revela o preço mínimo de venda para não trabalhar no vermelho.”
 ---
 
 ## 🚀 O PRÓXIMO NÍVEL DA SUA LOJA
@@ -963,6 +957,9 @@ Já pensou receber semanalmente:
 
 **Inteligência Semanal – SellerIA**  
 [Bullets de benefícios]  
+
+ Isso é o que a SellerIA pode fazer pela sua loja! 
+ Clique aqui👇🏼 e saiba mais 🚀🚀
 🔗 https://consultoriaefeitovendas.com.br/seller-ia/`;
 
 module.exports = {
