@@ -3183,10 +3183,21 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
     
     block.items.forEach((item, idx) => {
       totalConcluidos++;
-      md += `### ✓ ${item.title}\n`;
+      
+      // Adicionar contador de execuções se existir
+      const executionText = item.execution_count && item.execution_count > 1
+        ? ` (${item.execution_count}x)`
+        : '';
+      
+      md += `### ✓ ${item.title}${executionText}\n`;
       
       if (item.description) {
         md += `**Descrição:** ${item.description}\n\n`;
+      }
+      
+      // Mostrar último analista se disponível
+      if (item.last_analyst) {
+        md += `**Último Analista:** ${item.last_analyst}\n\n`;
       }
       
       if (item.completed_at) {
@@ -3199,9 +3210,28 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
           second: '2-digit',
           timeZone: 'America/Sao_Paulo'
         });
-        md += `**✅ Concluído em:** ${dataFormatada}\n\n`;
+        md += `**✅ Última Execução:** ${dataFormatada}\n\n`;
       } else {
         md += `**✅ Status:** Concluído\n\n`;
+      }
+      
+      // Adicionar histórico se houver múltiplas execuções
+      if (item.execution_history && item.execution_history.length > 1) {
+        md += `**📊 Histórico de Execuções:**\n`;
+        item.execution_history.forEach((hist, histIdx) => {
+          const histDataFormatada = hist.completed_at
+            ? new Date(hist.completed_at).toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: 'America/Sao_Paulo'
+            })
+            : 'Data não informada';
+          md += `- ${histIdx + 1}ª execução: ${hist.analyst_name || 'Analista não informado'} em ${histDataFormatada}\n`;
+        });
+        md += `\n`;
       }
       
       md += `---\n\n`;
@@ -3461,9 +3491,25 @@ app.post('/checklist-completed-pdf', async (req, res) => {
       });
     }
 
-    // Filtrar apenas blocos com pelo menos um item concluído
-    const completedBlocks = filtrarBlocosComAlgumConcluido(blocks);
-    console.log('📊 Blocos filtrados:', completedBlocks.length);
+    // Se markdown não foi fornecido, usar os blocks diretamente (já filtrados pelo frontend)
+    let completedBlocks;
+    
+    if (blocks && blocks.length > 0) {
+      // Usar blocks já filtrados do frontend
+      completedBlocks = blocks;
+      console.log('📊 Usando blocos do frontend (já filtrados):', completedBlocks.length);
+      
+      // Debug dos dados recebidos
+      console.log('🔍 Primeiro bloco exemplo:', JSON.stringify(completedBlocks[0], null, 2));
+      if (completedBlocks[0]?.items[0]) {
+        console.log('🔍 Primeiro item exemplo:', JSON.stringify(completedBlocks[0].items[0], null, 2));
+      }
+    } else {
+      console.log('❌ Nenhum bloco recebido');
+      return res.status(400).json({
+        error: "Nenhum bloco de checklist fornecido."
+      });
+    }
 
     if (completedBlocks.length === 0) {
       console.log('❌ Nenhum item concluído encontrado');
@@ -3476,9 +3522,9 @@ app.post('/checklist-completed-pdf', async (req, res) => {
     console.log('👤 Cliente:', clientName);
     console.log('📊 Blocos com itens concluídos:', completedBlocks.length);
 
-  
+    // Gerar markdown com todos os dados dos blocos
     const finalMarkdown = generateCompletedChecklistMarkdown(completedBlocks, clientName);
-    console.log('📝 Markdown gerado (primeiros 300 chars):', finalMarkdown.substring(0, 300));
+    console.log('📝 Markdown gerado (primeiros 500 chars):', finalMarkdown.substring(0, 500));
     console.log('👤 Nome do cliente no markdown:', finalMarkdown.includes(clientName));
     
     const htmlContent = await gerarHtmlChecklistConcluidos(finalMarkdown, clientName);
