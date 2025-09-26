@@ -3143,25 +3143,37 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
   const completedBlocks = filtrarBlocosComAlgumConcluido(blocks);
   console.log('📊 Blocos com itens concluídos:', completedBlocks.length);
   
+  // Gerar data e horário corretos no timezone brasileiro
+  const agora = new Date();
+  const dataFormatada = agora.toLocaleDateString('pt-BR', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    timeZone: 'America/Sao_Paulo'
+  });
+  
+  const horarioFormatado = agora.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo'
+  });
+  
+  console.log('🕒 Data/hora formatada:', dataFormatada, horarioFormatado);
+  
   if (completedBlocks.length === 0) {
-    const markdownVazio = `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n**Cliente:** ${clientName}\n\n*Nenhum item foi concluído ainda.*`;
+    const markdownVazio = `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n**Cliente:** ${clientName || 'Cliente não informado'}\n**Data:** ${dataFormatada}\n**Horário:** ${horarioFormatado}\n\n*Nenhum item foi concluído ainda.*`;
     console.log('📝 Markdown vazio gerado:', markdownVazio);
-    console.log('👤 Nome do cliente no markdown vazio:', markdownVazio.includes(clientName));
+    console.log('👤 Nome do cliente no markdown vazio:', markdownVazio.includes(clientName || 'Cliente não informado'));
     return markdownVazio;
   }
 
   let md = `# ✅ CHECKLIST OPERACIONAL - ITENS CONCLUÍDOS\n\n`;
-  md += `**Cliente:** ${clientName}\n`;
-  md += `**Data do Relatório:** ${new Date().toLocaleDateString('pt-BR', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })}\n\n`;
+  md += `**Cliente:** ${clientName || 'Cliente não informado'}\n`;
+  md += `**Data do Relatório:** ${dataFormatada}\n`;
+  md += `**Horário:** ${horarioFormatado}\n\n`;
 
   console.log('📝 Markdown inicial gerado (primeiros 200 chars):', md.substring(0, 200));
-  console.log('👤 Nome do cliente no markdown inicial:', md.includes(clientName));
+  console.log('👤 Nome do cliente no markdown inicial:', md.includes(clientName || 'Cliente não informado'));
 
   let totalConcluidos = 0;
   
@@ -3184,7 +3196,8 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
-          second: '2-digit'
+          second: '2-digit',
+          timeZone: 'America/Sao_Paulo'
         });
         md += `**✅ Concluído em:** ${dataFormatada}\n\n`;
       } else {
@@ -3208,10 +3221,34 @@ function generateCompletedChecklistMarkdown(blocks, clientName) {
 }
 
 // Função HTML específica para itens concluídos
-function gerarHtmlChecklistConcluidos(markdown, clientName) {
+async function gerarHtmlChecklistConcluidos(markdown, clientName) {
   console.log('🔧 Gerando HTML para checklist concluídos');
   console.log('👤 Nome do cliente recebido:', clientName);
   console.log('📝 Markdown recebido (primeiros 200 chars):', markdown.substring(0, 200));
+  
+  // Inicializar marked
+  const markedInstance = await initMarked();
+  
+  // Gerar data correta no timezone local
+  const agora = new Date();
+  const dataFormatada = agora.toLocaleDateString('pt-BR', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    timeZone: 'America/Sao_Paulo'
+  });
+  
+  const horarioFormatado = agora.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo'
+  });
+  
+  console.log('🕒 Data formatada:', dataFormatada);
+  console.log('🕒 Horário formatado:', horarioFormatado);
+  
+  // Processar markdown com marked
+  const markdownProcessado = await splitMarkdownWithExecutiveSummary(markdown);
   
   // Adiciona uma página separada para o resumo executivo
   // e evita quebra de página dentro do bloco do resumo
@@ -3341,42 +3378,42 @@ hr {
       <body>
         <div class="client-header">
           <h1>✅ CHECKLIST OPERACIONAL</h1>
-          <p><strong>Cliente:</strong> ${clientName}</p>
-          <p><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })}</p>
+          <p><strong>Cliente:</strong> ${clientName || 'Cliente não informado'}</p>
+          <p><strong>Data:</strong> ${dataFormatada}</p>
+          <p><strong>Horário:</strong> ${horarioFormatado}</p>
         </div>
         
-        ${splitMarkdownWithExecutiveSummary(marked, markdown)}
+        ${markdownProcessado}
       </body>
     </html>
   `;
   
   console.log('✅ HTML gerado com sucesso');
-  console.log('👤 Nome do cliente incluído no HTML:', htmlContent.includes(clientName));
+  console.log('👤 Nome do cliente incluído no HTML:', htmlContent.includes(clientName || 'Cliente não informado'));
+  console.log('🕒 Data incluída no HTML:', htmlContent.includes(dataFormatada));
+  console.log('🕒 Horário incluído no HTML:', htmlContent.includes(horarioFormatado));
   
   return htmlContent;
 }
 
 // Função auxiliar para separar o resumo executivo em uma página nova
-function splitMarkdownWithExecutiveSummary(marked, markdown) {
+async function splitMarkdownWithExecutiveSummary(markdown) {
+  // Inicializar marked se não estiver disponível
+  const markedInstance = await initMarked();
+  
   // Divide o markdown em duas partes: antes e depois do resumo executivo
   const resumoRegex = /(^|\n)(## +📊 RESUMO EXECUTIVO[\s\S]*)/i;
   const match = markdown.match(resumoRegex);
   if (!match) {
     // Não encontrou o resumo, retorna tudo normalmente
-    return marked(markdown);
+    return markedInstance(markdown);
   }
   const beforeResumo = markdown.slice(0, match.index);
   const resumo = match[2];
   return `
-    ${marked(beforeResumo)}
+    ${markedInstance(beforeResumo)}
     <div class="executive-summary-page">
-      ${marked(resumo)}
+      ${markedInstance(resumo)}
     </div>
   `;
 }
@@ -3439,13 +3476,12 @@ app.post('/checklist-completed-pdf', async (req, res) => {
     console.log('👤 Cliente:', clientName);
     console.log('📊 Blocos com itens concluídos:', completedBlocks.length);
 
-    // Gerar markdown apenas com os blocos e itens concluídos
+  
     const finalMarkdown = generateCompletedChecklistMarkdown(completedBlocks, clientName);
     console.log('📝 Markdown gerado (primeiros 300 chars):', finalMarkdown.substring(0, 300));
     console.log('👤 Nome do cliente no markdown:', finalMarkdown.includes(clientName));
     
-    // Gerar HTML específico para itens concluídos
-    const htmlContent = gerarHtmlChecklistConcluidos(finalMarkdown, clientName);
+    const htmlContent = await gerarHtmlChecklistConcluidos(finalMarkdown, clientName);
     console.log('🌐 HTML gerado (primeiros 500 chars):', htmlContent.substring(0, 500));
     console.log('👤 Nome do cliente no HTML:', htmlContent.includes(clientName));
 
