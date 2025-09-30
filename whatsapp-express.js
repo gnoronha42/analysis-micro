@@ -189,8 +189,8 @@ async function gerarMensagemExpressOpenAI(dados) {
   return data.choices?.[0]?.message?.content || "Análise não gerada.";
 }
 
-// Função para validar e formatar número de telefone
-function formatarNumeroTelefone(numero) {
+// Função para validar e formatar número de telefone (DESABILITADA - não usada mais)
+/* function formatarNumeroTelefone(numero) {
   // Remove todos os caracteres não numéricos
   const numeroLimpo = numero.replace(/\D/g, '');
   
@@ -200,10 +200,10 @@ function formatarNumeroTelefone(numero) {
   }
   
   return numeroLimpo;
-}
+} */
 
-// Função para formatar mensagem bonita para WhatsApp baseada na análise da IA
-function formatarMensagemWhatsAppComAnalise(dadosProcessados, analiseIA) {
+// Função para formatar mensagem bonita para WhatsApp baseada na análise da IA (DESABILITADA - não usada mais)
+/* function formatarMensagemWhatsAppComAnalise(dadosProcessados, analiseIA) {
   // Extrair informações específicas da análise da IA se possível
   let gargaloIA = dadosProcessados.gargalo;
   let dinheiroMesaIA = dadosProcessados.dinheiro_na_mesa;
@@ -288,10 +288,10 @@ Sua análise personalizada está pronta! 📊
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
   return mensagem.trim();
-}
+} */
 
-// Função para truncar mensagem se necessário
-function truncarMensagem(mensagem, maxLength = 4000) {
+// Função para truncar mensagem se necessário (DESABILITADA - não usada mais)
+/* function truncarMensagem(mensagem, maxLength = 4000) {
   if (mensagem.length <= maxLength) {
     return mensagem;
   }
@@ -299,14 +299,15 @@ function truncarMensagem(mensagem, maxLength = 4000) {
   // Trunca e adiciona indicação de continuação
   const truncated = mensagem.substring(0, maxLength - 200);
   return truncated + '\n\n...\n\n📞 *Continue a conversa conosco para receber a análise completa!*\n🚀 *EFEITO VENDAS*';
-}
+} */
 
-function formatarMarkdownParaWhatsApp(texto, ctx = {}) {
+// Função para formatar markdown para WhatsApp (DESABILITADA - não usada mais)
+/* function formatarMarkdownParaWhatsApp(texto, ctx = {}) {
   if (!texto || typeof texto !== 'string') return '';
   let t = texto.replace(/\r\n/g, '\n');
 
   // Limpeza básica de markdown
-  t = t.replace(/\*\*(.*?)\*\*/g, '*$1*'); // **bold** -> *bold*
+
   t = t.replace(/`([^`]+)`/g, '$1'); // remover crases
   t = t.replace(/^---+$/gm, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━'); // separadores
   t = t.replace(/^\s*[-•]\s+/gm, '• '); // bullets
@@ -348,10 +349,10 @@ function formatarMarkdownParaWhatsApp(texto, ctx = {}) {
   const nome = ctx.nome ? `\n👤 ${ctx.nome}` : '';
   const header = `🚀 *EFEITO VENDAS – Análise Express*${nome}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
   return `${header}${t}`;
-}
 
-// Função para enviar mensagem de texto via BotConversa
-async function enviarMensagemParaWhatsapp(numero, mensagem, nome = '') {
+
+// Função para enviar mensagem de texto via BotConversa (DESABILITADA - não usada mais)
+/* async function enviarMensagemParaWhatsapp(numero, mensagem, nome = '') {
   console.log('📱 Iniciando envio de mensagem para WhatsApp...');
   
   // Formatar número de telefone
@@ -465,9 +466,9 @@ async function enviarMensagemParaWhatsapp(numero, mensagem, nome = '') {
     console.error('❌ Erro no processo de envio:', error);
     throw error;
   }
-}
+} */
 
-function formatarPadraoWhatsApp(texto, nome) {
+function formatarAnaliseParaTela(texto, nome) {
   if (!texto || typeof texto !== 'string') return '';
   let t = texto;
 
@@ -551,12 +552,7 @@ router.post('/whatsapp-express', async (req, res) => {
 
     const { nome, email, telefone, faturamento30d, visitantes, pedidos, investimentoAds, roasMensal, desafio } = req.body;
     
-    // Validações
-    if (!telefone) {
-      console.log('❌ Telefone não fornecido');
-      return res.status(400).json({ error: "Telefone é obrigatório para envio ao WhatsApp." });
-    }
-    
+    // Validações básicas (telefone não é mais obrigatório)
     if (!nome || !faturamento30d || !visitantes || !pedidos || !investimentoAds || !roasMensal || !desafio) {
       console.log('❌ Dados obrigatórios faltando');
       return res.status(400).json({ error: "Todos os campos são obrigatórios: nome, faturamento30d, visitantes, pedidos, investimentoAds, roasMensal, desafio." });
@@ -569,26 +565,23 @@ router.post('/whatsapp-express', async (req, res) => {
     
     console.log('🤖 Análise da IA gerada (primeiros 300 chars):', analiseIA.substring(0, 300));
     
-    // NÃO formatar markdown para WhatsApp, usar texto puro da IA
-    const analise = formatarPadraoWhatsApp(analiseIA, nome);
-    console.log('📝 Mensagem final (primeiros 300 chars):', analise.substring(0, 300));
+    // Formatar análise para exibição na tela
+    const analise = formatarAnaliseParaTela(analiseIA, nome);
+    console.log('📝 Análise formatada (primeiros 300 chars):', analise.substring(0, 300));
     
-    // Envia a mensagem de texto para o WhatsApp
-    const resultado = await enviarMensagemParaWhatsapp(telefone, analise, nome);
-    
-    console.log('✅ Processo concluído com sucesso!');
+    console.log('✅ Análise gerada com sucesso para exibição na tela!');
     console.log('📋 Retornando para frontend:', {
       success: true,
-      preview_size: analise.substring(0, 200).length,
-      relatorio_size: analise.length
+      analise_size: analise.length,
+      tipo: 'exibicao_tela'
     });
     
     return res.json({ 
       success: true, 
-      mensagem: 'Análise enviada com sucesso para o WhatsApp!', 
-      resultado,
-      preview: analise, // Retornar o relatório completo no preview também
-      relatorio: analise // Incluir o relatório completo para permitir redirecionamento
+      mensagem: 'Análise gerada com sucesso!', 
+      preview: analise, // Análise completa para exibição
+      relatorio: analise, // Análise completa para exibição
+      analise: analise // Campo adicional para compatibilidade
     });
   } catch (error) {
     console.error('❌ Erro no processamento:', error);
