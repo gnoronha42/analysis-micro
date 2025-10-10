@@ -1180,25 +1180,22 @@ Mantendo essa eficiência e escalando anúncios em +[percentual progressivo entr
 Você já usa a Calculadora Inteligente Shopee. 
 Ela mostra o lucro líquido real de cada item já considerando taxas, comissão e frete, e revela o preço mínimo de venda para não trabalhar no vermelho.”
 ---
-
-## 🚀 O PRÓXIMO NÍVEL DA SUA LOJA
-
-“Toda essa análise é só uma amostra — cerca de 15% do que conseguimos mapear da sua loja.”  
+🧠 Você acabou de receber uma amostra do que a SellerIA é capaz de fazer — e já entendeu o quanto pequenas decisões podem mudar completamente seus resultados.
+Agora imagine ter isso toda semana, com uma análise completa da sua loja, sugestões personalizadas e relatórios de evolução — tudo com a mesma metodologia usada nas contas milionárias da Efeito Vendas.
+📲 E o melhor: você recebe tudo na palma da sua mão, direto no WhatsApp, de forma simples, visual e fácil de aplicar.
+⚠️ Oferta exclusiva para quem recebeu esta Análise Express.
+🚀 Acesso completo à SellerIA por apenas R$ 497/mês — menos de R$ 16 por dia pra ter uma inteligência que mostra o que fazer, quando fazer e o que ajustar pra triplicar seu faturamento.
 
 ---
 
-## 🎯 INTELIGÊNCIA SEMANAL – SELLERIA
-
-Já pensou receber semanalmente <- (esse texto é obrigatório):
-✅ Diagnóstico de 47 métricas da sua loja.
+O QUE VOCÊ RECEBE: 
+✅ Diagnóstico de 47 métricas da sua loja. 
 ✅ Sugestões práticas e baseada nas suas métricas para aumentar pedidos e faturamento. 
 ✅ Relatório detalhado de evolução mensal. 
-✅ Direcionamento estratégico para escalar vendas e otimizar investimento em Shopee Ads.
+✅ Direcionamento estratégico para escalar vendas e otimizar investimento em Shopee Ads. 
 ✅ Acesso gratuito à Calculadora Inteligente Shopee — saiba exatamente quanto sobra em cada venda e descubra qual é o preço mínimo para não ter prejuízo.
 
-Isso é o que a SellerIA pode fazer pela sua loja! 
-Clique aqui👇🏼 e saiba mais 🚀🚀
-🔗 🔗 https://consultoriaefeitovendas.com.br/seller-ia/
+👉 Ative sua análise completa agora:
 
 ---
 
