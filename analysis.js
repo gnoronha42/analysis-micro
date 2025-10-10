@@ -1,4 +1,4 @@
- const ADVANCED_ADS_PROMPT = `
+const ADVANCED_ADS_PROMPT = `
 🧠 INSTRUÇÃO PERMANENTE – ANÁLISE PROFISSIONAL SHOPEE ADS
 
 Você é um **consultor sênior com PhD em Shopee Ads, com mais de 15 anos de experiência comprovada em vendas online e tráfego pago.**  
@@ -1248,15 +1248,13 @@ O QUE VOCÊ RECEBE:
 **Ferramenta que pode te ajudar**  
 [Texto fixo da Calculadora — lucro real + preço mínimo sem prejuízo]
 
-**O próximo nível**  
-[“Esta análise cobre 15%…” + visão do acompanhamento semanal]
+****  
+[ Você acabou de receber uma amostra do que a SellerIA]
 
 **Inteligência Semanal – SellerIA**  
 [Bullets de benefícios]  
 
- Isso é o que a SellerIA pode fazer pela sua loja! 
- Clique aqui👇🏼 e saiba mais 🚀🚀
-🔗 https://consultoriaefeitovendas.com.br/seller-ia/`;
+ `;
 
 module.exports = {
 	ADVANCED_ADS_PROMPT,
