@@ -2,7 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const fetch = require('node-fetch');
-const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS } = require('./analysis');
+const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS, WHATSAPP_EXPRESS_PROMPT, WHATSAPP_CONSULTIVO_PROMPT } = require('./analysis');
 const { processarComparacao } = require('./comparison');
 const { processarCSVAnuncios, gerarInsightsCSV, processarCSVAnaliseContaCompleta, corrigirMetricasBasicas, validarDados, extrairDadosManualBypass, validarDadosBypass, gerarPromptBypass, extrairDadosRobusta, validarDadosRobusta } = require("./csv-processor");
 
@@ -1358,7 +1358,7 @@ app.post('/analise', async (req, res) => {
     if (!images || !Array.isArray(images) || images.length === 0) {
       return res.status(400).json({ error: "Imagens são obrigatórias" });
     }
-    if (!analysisType || !["ads", "account", "express"].includes(analysisType)) {
+    if (!analysisType || !["ads", "account", "express", "whatsapp-consultivo"].includes(analysisType)) {
       return res.status(400).json({ error: "Tipo de análise inválido" });
     }
 
@@ -1445,7 +1445,9 @@ ${validacaoMatematica.erros.length > 0 ? validacaoMatematica.erros.join('\n') : 
         ? `${ADVANCED_ADS_PROMPT}\n\n${reforcoMatematico}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`
         : analysisType === "account"
           ? `${ADVANCED_ACCOUNT_PROMPT}\n\n${reforcoMatematico}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`
-          : `${EXPRESS_ACCOUNT_ANALYSIS}\n\n${reforcoMatematico}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
+          : analysisType === "whatsapp-consultivo"
+            ? `${WHATSAPP_CONSULTIVO_PROMPT}\n\n${reforcoMatematico}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`
+            : `${EXPRESS_ACCOUNT_ANALYSIS}\n\n${reforcoMatematico}\n\n${reforco}\n\nIMPORTANTE: Considere todas as imagens abaixo e gere um ÚNICO relatório consolidado, mesclando os dados de todas elas.`;
 
     // ✅ NÃO adicionar dados pré-calculados se já temos dados corretos do CSV
     if (!dadosCorretos) {
@@ -2249,11 +2251,11 @@ app.post('/analisepdf', async (req, res) => {
       });
     }
 
-    if (!["ads", "account", "express"].includes(analysisType)) {
+    if (!["ads", "account", "express", "whatsapp-consultivo"].includes(analysisType)) {
       console.log('❌ Tipo de análise inválido:', analysisType);
       return res.status(400).json({ 
         error: "Tipo de análise inválido",
-        validTypes: ["ads", "account", "express"],
+        validTypes: ["ads", "account", "express", "whatsapp-consultivo"],
         received: analysisType
       });
     }
