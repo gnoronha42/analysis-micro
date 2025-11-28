@@ -1608,7 +1608,9 @@ ${validacaoMatematica.erros.length > 0 ? validacaoMatematica.erros.join('\n') : 
 });
 
 // ========= NOVOS ENDPOINTS: RELATÓRIO SHOPEE VIA DADOS =========
-function gerarMarkdownRelatorioShopee(dados = {}, clientName = 'Cliente', analysisType = 'account', extras = {}) {
+async function gerarMarkdownRelatorioShopee(dados = {}, clientName = 'Cliente', analysisType = 'account', extras = {}) {
+  console.log('🔄 Gerando relatório Shopee com IA usando dados reais...');
+  
   const dadosCorrigidos = validarECorrigirDados(dados);
   const visitantes = Number(dadosCorrigidos.visitantes || 0);
   const pedidos = Number(dadosCorrigidos.pedidos || 0);
@@ -1616,53 +1618,111 @@ function gerarMarkdownRelatorioShopee(dados = {}, clientName = 'Cliente', analys
   const ticket = Number(dadosCorrigidos.ticketMedio || (pedidos > 0 ? gmv / pedidos : 0));
   const roas = Number(dadosCorrigidos.roas || 0);
   const conversao = Number(dadosCorrigidos.conversao || (visitantes > 0 && pedidos > 0 ? (pedidos / visitantes) * 100 : 0));
+  const investimentoAds = Number(dadosCorrigidos.investimentoAds || 0);
 
   const shopName = extras.shopName || clientName;
   const period = extras.period || {};
   const topProducts = Array.isArray(extras.topProducts) ? extras.topProducts : [];
+  const totalProducts = Number(extras.totalProducts || 0);
+  const activeProducts = Number(extras.activeProducts || 0);
 
-  const periodoStr = period.from && period.to
-    ? `${new Date(period.from).toLocaleDateString('pt-BR')} a ${new Date(period.to).toLocaleDateString('pt-BR')}`
-    : 'Últimos 30 dias';
+  // Preparar dados para o prompt da IA (mesmo formato da análise por imagens)
+  const dadosFormatados = {
+    loja: shopName,
+    periodo: period.from && period.to
+      ? `${new Date(period.from).toLocaleDateString('pt-BR')} a ${new Date(period.to).toLocaleDateString('pt-BR')}`
+      : 'Últimos 30 dias',
+    visitantes: visitantes,
+    pedidos: pedidos,
+    gmv: gmv,
+    ticketMedio: ticket,
+    conversao: conversao,
+    investimentoAds: investimentoAds,
+    roas: roas,
+    totalProdutos: totalProducts,
+    produtosAtivos: activeProducts,
+    topProdutos: topProducts
+  };
 
-  const moeda = (v) => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const inteiro = (v) => Number(v || 0).toLocaleString('pt-BR');
-  const percentual = (v) => `${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
-
-  let md = `# 📊 RELATÓRIO DE ANÁLISE DE CONTA – SHOPEE\n`;
-  md += `**Loja:** ${shopName}\n\n`;
-  md += `**Período:** ${periodoStr}\n\n`;
-
-  md += `## 🔢 KPIs\n\n`;
-  md += `| Indicador | Valor |\n`;
-  md += `|---|---|\n`;
-  md += `| Visitantes Mês | ${visitantes > 0 ? inteiro(visitantes) : 'Dado não informado'} |\n`;
-  md += `| Pedidos Pagos Mês | ${inteiro(pedidos)} |\n`;
-  md += `| GMV Mês | ${moeda(gmv)} |\n`;
-  md += `| Ticket Médio Mês | ${moeda(ticket)} |\n`;
-  md += `| ROAS | ${roas > 0 ? roas.toFixed(2) + 'x' : '0,00x'} |\n`;
-  md += `| Taxa de Conversão Mês | ${visitantes > 0 ? percentual(conversao) : 'Dado não informado'} |\n\n`;
-
-  if (topProducts.length > 0) {
-    md += `## 🏆 Top 5 Produtos por Receita\n\n`;
-    md += `| Produto | Unidades | Receita |\n`;
-    md += `|---|---:|---:|\n`;
-    topProducts.slice(0, 5).forEach((p, i) => {
-      md += `| ${p.name || p.nome || `Produto ${i + 1}`} | ${inteiro(p.units || 0)} | ${moeda(p.revenue || 0)} |\n`;
-    });
-    md += `\n`;
+  // Usar exatamente o mesmo prompt da análise por imagens
+  let basePrompt;
+  if (analysisType === "ads") {
+    basePrompt = ADVANCED_ADS_PROMPT;
+  } else if (analysisType === "account") {
+    basePrompt = ADVANCED_ACCOUNT_PROMPT;
+  } else if (analysisType === "whatsapp-consultivo") {
+    basePrompt = WHATSAPP_CONSULTIVO_PROMPT;
+  } else {
+    basePrompt = EXPRESS_ACCOUNT_ANALYSIS;
   }
 
-  // Resumo executivo básico
-  const score = calcularScoreGeral(dadosCorrigidos);
-  md += `## 📈 Resumo Executivo\n\n`;
-  md += `- Score Geral: ${score}\n`;
-  md += `- Status: ${score >= 80 ? 'Excelente' : score >= 60 ? 'Bom' : score >= 40 ? 'Regular' : 'Crítico'}\n`;
-  md += `- Observação: ROAS calculado com a fórmula correta (GMV ÷ Investimento). Conversão depende de visitantes.\n\n`;
+  // Adicionar dados reais ao prompt
+  const promptComDados = `${basePrompt}
 
-  md += `---\n`;
-  md += `*Relatório gerado automaticamente com dados reais da API Shopee.*\n`;
-  return md;
+🚨 ANÁLISE BASEADA EM DADOS REAIS DA API SHOPEE 🚨
+
+DADOS EXTRAÍDOS AUTOMATICAMENTE DA INTEGRAÇÃO SHOPEE:
+
+**LOJA:** ${dadosFormatados.loja}
+**PERÍODO:** ${dadosFormatados.periodo}
+
+**MÉTRICAS PRINCIPAIS:**
+- Visitantes: ${dadosFormatados.visitantes.toLocaleString('pt-BR')}
+- Pedidos Pagos: ${dadosFormatados.pedidos.toLocaleString('pt-BR')}
+- GMV: R$ ${dadosFormatados.gmv.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+- Ticket Médio: R$ ${dadosFormatados.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+- Taxa de Conversão: ${dadosFormatados.conversao.toFixed(2)}%
+- Investimento em Ads: R$ ${dadosFormatados.investimentoAds.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+- ROAS: ${dadosFormatados.roas.toFixed(2)}x
+
+**CATÁLOGO:**
+- Total de Produtos: ${dadosFormatados.totalProdutos}
+- Produtos Ativos: ${dadosFormatados.produtosAtivos}
+
+${topProducts.length > 0 ? `**TOP PRODUTOS POR RECEITA:**
+${topProducts.slice(0, 5).map((p, i) => 
+  `${i + 1}. ${p.name || p.nome || `Produto ${i + 1}`} - ${(p.units || 0).toLocaleString('pt-BR')} unidades - R$ ${(p.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+).join('\n')}` : ''}
+
+IMPORTANTE: Use EXATAMENTE estes dados reais extraídos da API Shopee. NÃO invente números. Gere o relatório completo seguindo seu formato padrão, mas baseado 100% nestes dados reais.`;
+
+  try {
+    // Chamar a IA com os mesmos parâmetros da análise por imagens
+    const markdownFinal = await gerarAnaliseComIA(
+      promptComDados,
+      [], // Não há imagens para integração
+      analysisType,
+      [JSON.stringify(dadosFormatados, null, 2)] // Passar dados como OCR text
+    );
+
+    console.log('✅ Relatório gerado com IA usando dados reais da Shopee');
+    return markdownFinal;
+    
+  } catch (error) {
+    console.error('❌ Erro ao gerar relatório com IA:', error);
+    
+    // Fallback: gerar relatório simples se a IA falhar
+    console.log('🔄 Usando fallback: relatório simples');
+    const moeda = (v) => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const inteiro = (v) => Number(v || 0).toLocaleString('pt-BR');
+    const percentual = (v) => `${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+
+    let md = `# 📊 RELATÓRIO DE ANÁLISE DE CONTA – SHOPEE\n`;
+    md += `**Loja:** ${shopName}\n\n`;
+    md += `**Período:** ${dadosFormatados.periodo}\n\n`;
+    md += `## 🔢 KPIs\n\n`;
+    md += `| Indicador | Valor |\n`;
+    md += `|---|---|\n`;
+    md += `| Visitantes Mês | ${visitantes > 0 ? inteiro(visitantes) : 'Dado não informado'} |\n`;
+    md += `| Pedidos Pagos Mês | ${inteiro(pedidos)} |\n`;
+    md += `| GMV Mês | ${moeda(gmv)} |\n`;
+    md += `| Ticket Médio Mês | ${moeda(ticket)} |\n`;
+    md += `| ROAS | ${roas > 0 ? roas.toFixed(2) + 'x' : '0,00x'} |\n`;
+    md += `| Taxa de Conversão Mês | ${visitantes > 0 ? percentual(conversao) : 'Dado não informado'} |\n\n`;
+    md += `---\n`;
+    md += `*Relatório de fallback gerado com dados reais da API Shopee (IA indisponível).*\n`;
+    return md;
+  }
 }
 
 // Retorna markdown a partir de dados
@@ -1672,7 +1732,7 @@ app.post('/api/relatorio-shopee-markdown', async (req, res) => {
     if (!dados || typeof dados !== 'object') {
       return res.status(400).json({ error: 'Dados são obrigatórios (objeto)' });
     }
-    const markdown = gerarMarkdownRelatorioShopee(dados, clientName, analysisType, extras);
+    const markdown = await gerarMarkdownRelatorioShopee(dados, clientName, analysisType, extras);
     return res.json({ success: true, markdown });
   } catch (error) {
     console.error('❌ Erro ao gerar markdown Shopee:', error);
@@ -1687,7 +1747,7 @@ app.post('/api/relatorio-shopee-pdf', async (req, res) => {
     if (!dados || typeof dados !== 'object') {
       return res.status(400).json({ error: 'Dados são obrigatórios (objeto)' });
     }
-    const markdown = gerarMarkdownRelatorioShopee(dados, clientName, analysisType, extras);
+    const markdown = await gerarMarkdownRelatorioShopee(dados, clientName, analysisType, extras);
     const pdfBuffer = await gerarPdfDoMarkdown(markdown, clientName, analysisType);
     const filename = `${clientName.replace(/[^a-zA-Z0-9]/g, '_')}-${analysisType}-relatorio.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
