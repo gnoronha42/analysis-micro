@@ -1021,6 +1021,8 @@ const corsOptions = {
     'http://localhost:3000',
     'http://localhost:3001',
     'https://localhost:3000',
+    'https://bob-disquieting-unstoutly.ngrok-free.dev'
+
     
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -1050,7 +1052,8 @@ app.use((req, res, next) => {
     'http://selleria.com.br',
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://localhost:3000'
+    'https://localhost:3000',
+     'https://bob-disquieting-unstoutly.ngrok-free.dev'
   ];
   
   if (allowedOrigins.includes(origin)) {
@@ -1277,6 +1280,88 @@ function calcularCPA(markdown) {
   return markdown;
 }
 
+// ====== WHATSAPP MESSAGE (resumo curto e humano) ======
+function formatarMoedaBR(valor) {
+  if (typeof valor !== 'number' || !isFinite(valor)) return 'R$ 0,00';
+  return `R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatarPercentualBR(valor) {
+  if (typeof valor !== 'number' || !isFinite(valor)) return '0,00%';
+  return `${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+}
+
+function formatarMultiplo(valor) {
+  if (typeof valor !== 'number' || !isFinite(valor)) return '0,00x';
+  return `${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x`;
+}
+
+function gerarMensagemWhatsappBasica(metricas = {}, clientName = 'Cliente') {
+  const visitantes = Number(metricas.visitantes || 0);
+  const pedidos = Number(metricas.pedidos || 0);
+  const gmv = Number(metricas.gmv || 0);
+  const investimento = Number(metricas.investimento || 0);
+  const roas = Number(
+    metricas.roas ||
+    (gmv > 0 && investimento > 0 ? (gmv / investimento) : 0)
+  );
+  const cpa = Number(
+    metricas.cpa ||
+    (investimento > 0 && pedidos > 0 ? (investimento / pedidos) : 0)
+  );
+  const conversao = Number(
+    metricas.conversao ||
+    (visitantes > 0 && pedidos > 0 ? ((pedidos / visitantes) * 100) : 0)
+  );
+  const ticketMedio = Number(
+    metricas.ticketMedio ||
+    (gmv > 0 && pedidos > 0 ? (gmv / pedidos) : 0)
+  );
+
+  const conversaoTxt = visitantes > 0 ? formatarPercentualBR(conversao) : 'Dado não informado';
+  const visitantesTxt = visitantes > 0 ? visitantes.toLocaleString('pt-BR') : 'Dado não informado';
+
+  let sugestaoConversao = conversao > 0 && conversao < 1.2
+    ? '🔧 Conversão abaixo de 1,2% — revisar ficha (imagens, descrição, prova social) e preço.'
+    : '✅ Conversão em faixa saudável — manter qualidade de ficha e monitorar.';
+
+  let sugestaoTicket = ticketMedio > 0 && ticketMedio < 150
+    ? '🔧 Ticket baixo — testar combos/kits e “leve mais por menos”.'
+    : '✅ Ticket saudável — manter kits estratégicos para preservar patamar.';
+
+  let sugestaoAds;
+  if (investimento === 0) {
+    sugestaoAds = 'ℹ️ Sem investimento em Ads — considerar testes controlados para acelerar tráfego.';
+  } else if (roas >= 8) {
+    sugestaoAds = '🚀 ROAS ≥ 8x — escalar +10–20% mantendo monitoramento de CPA/ROAS.';
+  } else if (roas >= 4) {
+    sugestaoAds = '🛠️ ROAS entre 4x e 8x — otimizar criativos/segmentação e página antes de escalar.';
+  } else {
+    sugestaoAds = '⛔ ROAS baixo — pausar itens ineficientes e realocar verba para vencedores.';
+  }
+
+  const msg =
+`Oi ${clientName}! Segue um resumo claro da sua loja 👇
+
+• Visitantes: ${visitantesTxt}
+• Pedidos: ${pedidos.toLocaleString('pt-BR')}
+• Conversão: ${conversaoTxt}
+• GMV: ${formatarMoedaBR(gmv)}
+• Ticket médio: ${formatarMoedaBR(ticketMedio)}
+• Investimento em Ads: ${formatarMoedaBR(investimento)}
+• ROAS: ${formatarMultiplo(roas)}
+• CPA: ${formatarMoedaBR(cpa)}
+
+Leituras rápidas:
+${sugestaoConversao}
+${sugestaoTicket}
+${sugestaoAds}
+
+Se quiser, envio um plano de ação da semana com 3 passos práticos. 🚀`;
+
+  return msg;
+}
+
 async function gerarAnaliseComIA(basePrompt, imageMessages, analysisType, ocrTexts, maxRetries = 1) {
   console.log('===== INICIANDO GERAÇÃO DE ANÁLISE =====');
   console.log('Prompt base (primeiros 300 chars):', basePrompt.slice(0, 300));
@@ -1474,11 +1559,36 @@ ${validacaoMatematica.erros.length > 0 ? validacaoMatematica.erros.join('\n') : 
     
     console.log('🧮 Markdown após cálculo do CPA (primeiros 500 chars):', markdownFinal.substring(0, 500));
 
+    // Montar mensagem de WhatsApp básica com os dados disponíveis
+    let whatsappMessage = '';
+    try {
+      if (dadosCorretos && dadosCorretos.resumoConsolidado) {
+        const r = dadosCorretos.resumoConsolidado;
+        whatsappMessage = gerarMensagemWhatsappBasica({
+          visitantes: 0, // não disponível no CSV de anúncios
+          pedidos: r.totalConversoes || 0,
+          gmv: r.totalGMV || 0,
+          investimento: r.totalInvestimento || 0,
+          roas: r.roasMedio || 0,
+          cpa: r.cpaMedio || 0,
+          ticketMedio: (r.totalGMV > 0 && r.totalConversoes > 0) ? (r.totalGMV / r.totalConversoes) : 0,
+          conversao: 0
+        }, clientName || 'Cliente');
+      } else {
+        const metricasReais = extrairMetricasReaisDoCSV([]);
+        whatsappMessage = gerarMensagemWhatsappBasica(metricasReais, clientName || 'Cliente');
+      }
+    } catch (e) {
+      console.warn('⚠️ Falha ao gerar mensagem de WhatsApp:', e.message);
+      whatsappMessage = '';
+    }
+
     res.json({
       analysis: markdownFinal,
       analysisType,
       clientName: clientName || "Cliente",
       timestamp: new Date().toISOString(),
+      whatsappMessage,
       dadosCorretos: dadosCorretos ? {
         investimentoTotal: dadosCorretos.resumoConsolidado.totalInvestimento,
         gmvTotal: dadosCorretos.resumoConsolidado.totalGMV,
@@ -1494,6 +1604,114 @@ ${validacaoMatematica.erros.length > 0 ? validacaoMatematica.erros.join('\n') : 
       error: error.message || "Erro interno do servidor",
       details: "Falha na geração da análise",
     });
+  }
+});
+
+// ========= NOVOS ENDPOINTS: RELATÓRIO SHOPEE VIA DADOS =========
+function gerarMarkdownRelatorioShopee(dados = {}, clientName = 'Cliente', analysisType = 'account', extras = {}) {
+  const dadosCorrigidos = validarECorrigirDados(dados);
+  const visitantes = Number(dadosCorrigidos.visitantes || 0);
+  const pedidos = Number(dadosCorrigidos.pedidos || 0);
+  const gmv = Number(dadosCorrigidos.gmv || 0);
+  const ticket = Number(dadosCorrigidos.ticketMedio || (pedidos > 0 ? gmv / pedidos : 0));
+  const roas = Number(dadosCorrigidos.roas || 0);
+  const conversao = Number(dadosCorrigidos.conversao || (visitantes > 0 && pedidos > 0 ? (pedidos / visitantes) * 100 : 0));
+
+  const shopName = extras.shopName || clientName;
+  const period = extras.period || {};
+  const topProducts = Array.isArray(extras.topProducts) ? extras.topProducts : [];
+
+  const periodoStr = period.from && period.to
+    ? `${new Date(period.from).toLocaleDateString('pt-BR')} a ${new Date(period.to).toLocaleDateString('pt-BR')}`
+    : 'Últimos 30 dias';
+
+  const moeda = (v) => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const inteiro = (v) => Number(v || 0).toLocaleString('pt-BR');
+  const percentual = (v) => `${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+
+  let md = `# 📊 RELATÓRIO DE ANÁLISE DE CONTA – SHOPEE\n`;
+  md += `**Loja:** ${shopName}\n\n`;
+  md += `**Período:** ${periodoStr}\n\n`;
+
+  md += `## 🔢 KPIs\n\n`;
+  md += `| Indicador | Valor |\n`;
+  md += `|---|---|\n`;
+  md += `| Visitantes Mês | ${visitantes > 0 ? inteiro(visitantes) : 'Dado não informado'} |\n`;
+  md += `| Pedidos Pagos Mês | ${inteiro(pedidos)} |\n`;
+  md += `| GMV Mês | ${moeda(gmv)} |\n`;
+  md += `| Ticket Médio Mês | ${moeda(ticket)} |\n`;
+  md += `| ROAS | ${roas > 0 ? roas.toFixed(2) + 'x' : '0,00x'} |\n`;
+  md += `| Taxa de Conversão Mês | ${visitantes > 0 ? percentual(conversao) : 'Dado não informado'} |\n\n`;
+
+  if (topProducts.length > 0) {
+    md += `## 🏆 Top 5 Produtos por Receita\n\n`;
+    md += `| Produto | Unidades | Receita |\n`;
+    md += `|---|---:|---:|\n`;
+    topProducts.slice(0, 5).forEach((p, i) => {
+      md += `| ${p.name || p.nome || `Produto ${i + 1}`} | ${inteiro(p.units || 0)} | ${moeda(p.revenue || 0)} |\n`;
+    });
+    md += `\n`;
+  }
+
+  // Resumo executivo básico
+  const score = calcularScoreGeral(dadosCorrigidos);
+  md += `## 📈 Resumo Executivo\n\n`;
+  md += `- Score Geral: ${score}\n`;
+  md += `- Status: ${score >= 80 ? 'Excelente' : score >= 60 ? 'Bom' : score >= 40 ? 'Regular' : 'Crítico'}\n`;
+  md += `- Observação: ROAS calculado com a fórmula correta (GMV ÷ Investimento). Conversão depende de visitantes.\n\n`;
+
+  md += `---\n`;
+  md += `*Relatório gerado automaticamente com dados reais da API Shopee.*\n`;
+  return md;
+}
+
+// Retorna markdown a partir de dados
+app.post('/api/relatorio-shopee-markdown', async (req, res) => {
+  try {
+    const { dados, clientName = 'Cliente', analysisType = 'account', extras = {} } = req.body || {};
+    if (!dados || typeof dados !== 'object') {
+      return res.status(400).json({ error: 'Dados são obrigatórios (objeto)' });
+    }
+    const markdown = gerarMarkdownRelatorioShopee(dados, clientName, analysisType, extras);
+    return res.json({ success: true, markdown });
+  } catch (error) {
+    console.error('❌ Erro ao gerar markdown Shopee:', error);
+    return res.status(500).json({ error: 'Erro interno ao gerar markdown', details: error.message });
+  }
+});
+
+// Retorna PDF direto a partir de dados
+app.post('/api/relatorio-shopee-pdf', async (req, res) => {
+  try {
+    const { dados, clientName = 'Cliente', analysisType = 'account', extras = {} } = req.body || {};
+    if (!dados || typeof dados !== 'object') {
+      return res.status(400).json({ error: 'Dados são obrigatórios (objeto)' });
+    }
+    const markdown = gerarMarkdownRelatorioShopee(dados, clientName, analysisType, extras);
+    const pdfBuffer = await gerarPdfDoMarkdown(markdown, clientName, analysisType);
+    const filename = `${clientName.replace(/[^a-zA-Z0-9]/g, '_')}-${analysisType}-relatorio.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    return res.send(pdfBuffer);
+  } catch (error) {
+    console.error('❌ Erro ao gerar PDF Shopee:', error);
+    return res.status(500).json({ error: 'Erro interno ao gerar PDF', details: error.message });
+  }
+});
+
+// Endpoint dedicado: gerar mensagem de WhatsApp a partir de métricas
+app.post('/whatsapp-message', async (req, res) => {
+  try {
+    const { dados, clientName = 'Cliente' } = req.body || {};
+    if (!dados || typeof dados !== 'object') {
+      return res.status(400).json({ error: "Corpo inválido. Envie { dados: {...}, clientName?: string }" });
+    }
+    const msg = gerarMensagemWhatsappBasica(dados, clientName);
+    return res.json({ success: true, message: msg, clientName });
+  } catch (error) {
+    console.error('❌ Erro ao gerar mensagem de WhatsApp:', error);
+    return res.status(500).json({ error: 'Erro interno ao gerar mensagem', details: error.message });
   }
 });
 
@@ -3908,9 +4126,119 @@ app.post('/api/metricas-avancadas', async (req, res) => {
   }
 });
 
+// Função para gerar mensagem WhatsApp sobre novidades da integração Shopee
+function gerarMensagemIntegracaoShopee(clientName, analysisType) {
+  const nome = clientName || '[NOME]';
+  
+  const mensagens = {
+    'ads': `Oi ${nome}! 🚀
+
+Com a integração Shopee, seu relatório de Ads agora traz:
+
+✅ **GMV e Pedidos Pagos** - direto da API (sem depender de CSV)
+✅ **Ranking de produtos** por vendas via anúncios
+✅ **CPA calculado automaticamente** (Investimento ÷ Pedidos)
+
+O que continua igual:
+• Investimento, ROAS, CTR, Impressões (via CSV de anúncios)
+• Análise SKU a SKU com diagnósticos técnicos
+
+Resultado: dados mais precisos e menos trabalho manual! 💪`,
+
+    'account': `Oi ${nome}! 📊
+
+Seu relatório completo agora inclui:
+
+✅ **GMV Mês, Pedidos Pagos, Ticket Médio** - automáticos da API
+✅ **Ranking de produtos** por vendas, conversão e carrinho (top 5/10)
+✅ **Cancelamentos** com taxa e volume por período
+✅ **Tendências de 30 dias** (GMV e pedidos)
+
+O que continua igual:
+• Visitantes e Conversão (via CSV "shop-stats")
+• Ads: Investimento, ROAS, CTR (via CSV/prints)
+
+Benefício: visão completa da loja com dados atualizados automaticamente! 🎯`,
+
+    'express': `Oi ${nome}! ⚡
+
+Seu relatório express agora tem:
+
+✅ **GMV, Pedidos e Ticket Médio** - direto da API
+✅ **Top 5 produtos** com dados reais de vendas
+✅ **Diagnóstico do funil** mais preciso
+
+O que continua igual:
+• Visitantes e Conversão (via CSV)
+• Ads: Investimento, ROAS (via CSV)
+
+Resultado: plano semanal mais rápido e baseado em dados reais! 📈`,
+
+    'whatsapp-express': `Oi ${nome}! 💬
+
+Sua análise express no WhatsApp agora mostra:
+
+✅ **Faturamento, Pedidos e Ticket** - automáticos
+✅ **ROAS calculado** com dados reais
+✅ **Sugestões personalizadas** baseadas nos seus números
+
+O que continua igual:
+• Visitantes (via CSV)
+• Investimento em Ads (via CSV)
+
+Benefício: diagnóstico rápido e preciso na palma da mão! 📱`,
+
+    'whatsapp-consultivo': `Oi ${nome}! 📲
+
+Sua análise semanal agora traz:
+
+✅ **GMV, Pedidos Pagos, Ticket Médio** - atualizados automaticamente
+✅ **Funil produto a produto** com dados reais de vendas
+✅ **Tendências semanais** comparando períodos
+
+O que continua igual:
+• Visualizações e Adições ao Carrinho (via CSV)
+• Ads: Investimento, ROAS (via CSV)
+
+Resultado: acompanhamento semanal mais confiável e menos manual! 🔄`
+  };
+
+  return mensagens[analysisType] || mensagens['account'];
+}
+
+// Endpoint para gerar mensagem de integração
+app.get('/api/mensagem-integracao', (req, res) => {
+  try {
+    const { clientName, analysisType } = req.query;
+    
+    if (!analysisType) {
+      return res.status(400).json({ 
+        error: 'analysisType é obrigatório',
+        tipos: ['ads', 'account', 'express', 'whatsapp-express', 'whatsapp-consultivo']
+      });
+    }
+
+    const mensagem = gerarMensagemIntegracaoShopee(clientName, analysisType);
+    
+    res.json({
+      success: true,
+      clientName: clientName || '[NOME]',
+      analysisType,
+      mensagem
+    });
+  } catch (error) {
+    console.error('❌ Erro ao gerar mensagem:', error);
+    res.status(500).json({ 
+      error: 'Erro interno do servidor',
+      details: error.message 
+    });
+  }
+});
+
 // Exportar função para testes
 module.exports = {
-  calcularCPA
+  calcularCPA,
+  gerarMensagemIntegracaoShopee
 };
 
 const PORT = process.env.PORT || 3001;
@@ -3932,4 +4260,5 @@ app.listen(PORT, () => {
   console.log(`⚡ NOVO: Análise com BYPASS em: POST http://localhost:${PORT}/analise-csv-bypass`);
   console.log(`🔄 NOVO: Análise ROBUSTA em: POST http://localhost:${PORT}/analise-csv-robusta`);
   console.log(`🧪 NOVO: Testar TODAS as soluções em: POST http://localhost:${PORT}/test-todas-solucoes`);
+  console.log(`📱 Mensagem Integração Shopee: GET http://localhost:${PORT}/api/mensagem-integracao?clientName=Nome&analysisType=account`);
 });
