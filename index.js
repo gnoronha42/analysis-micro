@@ -5,6 +5,7 @@ const fetch = require('node-fetch');
 const { ADVANCED_ADS_PROMPT, ADVANCED_ACCOUNT_PROMPT, EXPRESS_ACCOUNT_ANALYSIS, WHATSAPP_EXPRESS_PROMPT, WHATSAPP_CONSULTIVO_PROMPT } = require('./analysis');
 const { processarComparacao } = require('./comparison');
 const { processarCSVAnuncios, gerarInsightsCSV, processarCSVAnaliseContaCompleta, corrigirMetricasBasicas, validarDados, extrairDadosManualBypass, validarDadosBypass, gerarPromptBypass, extrairDadosRobusta, validarDadosRobusta } = require("./csv-processor");
+const { calcularPedidosPagos30Dias, PEDIDOS_PAGOS_STATUSES, PEDIDOS_NAO_PAGOS_STATUSES } = require('./shopee-vendas');
 
 // Sistema de análise de tendências melhorado
 function analisarTendencias(dados) {
@@ -1008,7 +1009,16 @@ async function initMarked() {
 }
 
 const cors = require('cors');
+const { Pool } = require('pg');
 const app = express();
+
+// Configuração do Banco de Dados (Postgres)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 // Configuração CORS mais específica
 const corsOptions = {
@@ -1016,6 +1026,8 @@ const corsOptions = {
     'https://shoppe-ai-9px3.vercel.app',
     'https://www.selleria.com.br',
     'https://selleria.com.br',
+    'http://localhost:3000',
+    'http://localhost:3001',
     'http://www.selleria.com.br',
     'http://selleria.com.br',
     'http://localhost:3000',
@@ -1039,6 +1051,113 @@ app.use((req, res, next) => {
   // Limpar cache expirado a cada requisição
   limparCacheExpirado();
   next();
+});
+
+// Rota Direta de Dashboard (Evita timeout do Vercel e Fetch Proxy)
+// O Frontend pode chamar esta rota diretamente.
+app.get('/api/dashboard/stats', async (req, res) => {
+  try {
+    const { time_from, time_to } = req.query;
+    console.log('[MICRO] Dashboard Stats Direct Request');
+
+    // 1. Buscar integrações Shopee no Banco
+    const client = await pool.connect();
+    let integrations = [];
+    try {
+      const query = `
+        SELECT ci.shop_id, ci.access_token, c.name as shop_name
+        FROM client_integrations ci
+        JOIN clients c ON ci.client_id = c.id
+        WHERE ci.provider = 'shopee'
+        LIMIT 3
+      `;
+      const result = await client.query(query);
+      integrations = result.rows;
+    } finally {
+      client.release();
+    }
+
+    if (!integrations.length) {
+      return res.json({
+        totalSellers: 0,
+        totalGmv: 0,
+        totalPedidos: 0,
+        ticketMedio: 0,
+        activeStores: [],
+        topProducts: []
+      });
+    }
+
+    // 2. Definir Período
+    let timeFromParam, timeToParam;
+    if (time_from && time_to) {
+      timeFromParam = Number(time_from);
+      timeToParam = Number(time_to);
+    } else {
+      // Espelho Shopee (15/11 - 14/12 Exemplo Hardcoded no original, vamos usar dinâmico ou fixo conforme original)
+      // Usando lógica de 30 dias se não especificado, ou o hardcoded do original se preferir
+      const now = new Date();
+      const end = new Date(now.setHours(23, 59, 59, 999));
+      const start = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+      start.setHours(0, 0, 0, 0);
+      timeFromParam = Math.floor(start.getTime() / 1000);
+      timeToParam = Math.floor(end.getTime() / 1000);
+    }
+
+    // 3. Processar Lojas em Paralelo
+    const statsPromises = integrations.map(async (store) => {
+      try {
+        console.log(`[MICRO] Processando loja ${store.shop_name} (${store.shop_id})...`);
+        const result = await calcularPedidosPagos30Dias(
+          store.access_token,
+          store.shop_id,
+          timeFromParam,
+          timeToParam
+        );
+        return {
+          shopName: store.shop_name,
+          shopId: store.shop_id,
+          ...result
+        };
+      } catch (e) {
+        console.error(`[MICRO] Erro loja ${store.shop_id}:`, e.message);
+        return null;
+      }
+    });
+
+    const results = (await Promise.all(statsPromises)).filter(r => r !== null);
+
+    // 4. Agregar Resultados
+    const totalSellers = results.length;
+    const totalVendas = results.reduce((acc, r) => acc + r.totalVendas, 0);
+    const totalPedidos = results.reduce((acc, r) => acc + r.totalPedidos, 0);
+    const ticketMedio = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
+
+    const responseData = {
+      totalSellers,
+      totalGmv: totalVendas,
+      totalRealPaidValue: totalVendas,
+      totalPedidos,
+      ticketMedio,
+      activeStores: results.map(r => ({
+        name: r.shopName,
+        gmv: r.totalVendas,
+        orders: r.totalPedidos,
+        ads: { spend: 0, roas: 0, impressions: 0, clicks: 0, ctr: 0, cpa: 0 }, // Ads Placeholder
+        isAnnualFallback: false
+      })),
+      storeDetails: results,
+      topProducts: results.flatMap(r => r.topProducts || [])
+        .sort((a, b) => b.sales - a.sales)
+        .slice(0, 10)
+    };
+
+    res.json(responseData);
+
+  } catch (error) {
+    console.error('[MICRO] Erro Dashboard Stats:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Middleware adicional para headers CORS em todas as respostas
@@ -1630,7 +1749,7 @@ async function gerarMarkdownRelatorioShopee(dados = {}, clientName = 'Cliente', 
   const dadosFormatados = {
     loja: shopName,
     periodo: period.from && period.to
-      ? `${new Date(period.from).toLocaleDateString('pt-BR')} a ${new Date(period.to).toLocaleDateString('pt-BR')}`
+    ? `${new Date(period.from).toLocaleDateString('pt-BR')} a ${new Date(period.to).toLocaleDateString('pt-BR')}`
       : 'Últimos 30 dias',
     visitantes: visitantes,
     pedidos: pedidos,
@@ -1703,25 +1822,25 @@ IMPORTANTE: Use EXATAMENTE estes dados reais extraídos da API Shopee. NÃO inve
     
     // Fallback: gerar relatório simples se a IA falhar
     console.log('🔄 Usando fallback: relatório simples');
-    const moeda = (v) => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    const inteiro = (v) => Number(v || 0).toLocaleString('pt-BR');
-    const percentual = (v) => `${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+  const moeda = (v) => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const inteiro = (v) => Number(v || 0).toLocaleString('pt-BR');
+  const percentual = (v) => `${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 
-    let md = `# 📊 RELATÓRIO DE ANÁLISE DE CONTA – SHOPEE\n`;
-    md += `**Loja:** ${shopName}\n\n`;
+  let md = `# 📊 RELATÓRIO DE ANÁLISE DE CONTA – SHOPEE\n`;
+  md += `**Loja:** ${shopName}\n\n`;
     md += `**Período:** ${dadosFormatados.periodo}\n\n`;
-    md += `## 🔢 KPIs\n\n`;
-    md += `| Indicador | Valor |\n`;
-    md += `|---|---|\n`;
-    md += `| Visitantes Mês | ${visitantes > 0 ? inteiro(visitantes) : 'Dado não informado'} |\n`;
-    md += `| Pedidos Pagos Mês | ${inteiro(pedidos)} |\n`;
-    md += `| GMV Mês | ${moeda(gmv)} |\n`;
-    md += `| Ticket Médio Mês | ${moeda(ticket)} |\n`;
-    md += `| ROAS | ${roas > 0 ? roas.toFixed(2) + 'x' : '0,00x'} |\n`;
-    md += `| Taxa de Conversão Mês | ${visitantes > 0 ? percentual(conversao) : 'Dado não informado'} |\n\n`;
-    md += `---\n`;
+  md += `## 🔢 KPIs\n\n`;
+  md += `| Indicador | Valor |\n`;
+  md += `|---|---|\n`;
+  md += `| Visitantes Mês | ${visitantes > 0 ? inteiro(visitantes) : 'Dado não informado'} |\n`;
+  md += `| Pedidos Pagos Mês | ${inteiro(pedidos)} |\n`;
+  md += `| GMV Mês | ${moeda(gmv)} |\n`;
+  md += `| Ticket Médio Mês | ${moeda(ticket)} |\n`;
+  md += `| ROAS | ${roas > 0 ? roas.toFixed(2) + 'x' : '0,00x'} |\n`;
+  md += `| Taxa de Conversão Mês | ${visitantes > 0 ? percentual(conversao) : 'Dado não informado'} |\n\n`;
+  md += `---\n`;
     md += `*Relatório de fallback gerado com dados reais da API Shopee (IA indisponível).*\n`;
-    return md;
+  return md;
   }
 }
 
@@ -4080,6 +4199,164 @@ function extrairKpisDoTexto(texto) {
   //whatsapp-express.js
 const whatsappExpressRouter = require('./whatsapp-express');
 
+// Cache para armazenar resultados de processamento
+const processingCache = new Map();
+
+// ========= NOVO ENDPOINT: CÁLCULO DE VENDAS SHOPEE (COM PROCESSAMENTO ASSÍNCRONO) =========
+// IMPORTANTE: Registrar ANTES do app.use('/api', ...) para não ser capturado por outros routers
+app.post('/api/shopee/vendas-reais', async (req, res) => {
+  try {
+    const { access_token, shop_id, time_from, time_to } = req.body;
+
+    if (!access_token || !shop_id) {
+      return res.status(400).json({
+        error: 'access_token e shop_id são obrigatórios'
+      });
+    }
+
+    // Criar chave única para este processamento
+    const cacheKey = `${shop_id}_${time_from || 'default'}_${time_to || 'default'}`;
+    
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`[VENDAS-REAIS] Buscando pedidos pagos (Microserviço)`);
+    console.log(`Período: ${time_from ? 'Customizado' : 'Últimos 30 dias'}`);
+    if (time_from && time_to) {
+      console.log(`De: ${new Date(time_from * 1000).toISOString().split('T')[0]} até ${new Date(time_to * 1000).toISOString().split('T')[0]}`);
+    }
+    console.log(`Cache Key: ${cacheKey}`);
+    console.log(`${'='.repeat(80)}`);
+
+    // Verificar se já existe resultado em cache
+    if (processingCache.has(cacheKey)) {
+      const cached = processingCache.get(cacheKey);
+      console.log(`[VENDAS-REAIS] Retornando resultado do cache`);
+      return res.json(cached);
+    }
+
+    // Iniciar processamento assíncrono (não aguardar)
+    const processamento = calcularPedidosPagos30Dias(
+      access_token,
+      shop_id,
+      time_from ? Number(time_from) : undefined,
+      time_to ? Number(time_to) : undefined
+    ).then(resultado => {
+      console.log(`\n${'='.repeat(80)}`);
+      console.log(`[VENDAS-REAIS] RESULTADO FINAL - PEDIDOS PAGOS:`);
+      console.log(`  Vendas de Pedidos Pagos: R$ ${resultado.totalVendas.toFixed(2)}`);
+      
+      const canceladosNoPeriodo = resultado.statusBreakdown['CANCELLED'] || 0;
+      console.log(`  Pedidos Pagos (Sistema): ${resultado.totalPedidos}`);
+      console.log(`  Cancelados (Total Encontrado): ${canceladosNoPeriodo}`);
+      console.log(`  Total Processados: ${resultado.pedidosProcessados}`);
+      console.log(`  Período: ${resultado.periodo.inicio} até ${resultado.periodo.fim}`);
+      console.log(`  Status de Pedidos Pagos: ${PEDIDOS_PAGOS_STATUSES.join(', ')}`);
+      console.log(`  Status Não Pagos: ${PEDIDOS_NAO_PAGOS_STATUSES.join(', ')}`);
+      console.log(`${'='.repeat(80)}\n`);
+
+      const response = {
+        success: true,
+        data: {
+          vendas: resultado.totalVendas,
+          pedidos: resultado.totalPedidos,
+          pedidosProcessados: resultado.pedidosProcessados,
+          statusBreakdown: resultado.statusBreakdown,
+          periodo: resultado.periodo,
+          topProducts: resultado.topProducts,
+          criterios: {
+            statusPedidosPagos: PEDIDOS_PAGOS_STATUSES,
+            statusNaoPagos: PEDIDOS_NAO_PAGOS_STATUSES,
+            metodo: 'get_order_list + paginacao_completa + filtro status painel + paid_time/create_time + soma paid_price/total_amount',
+            periodo: time_from ? 'customizado' : 'ultimos_30_dias'
+          }
+        }
+      };
+
+      // Armazenar no cache por 5 minutos
+      processingCache.set(cacheKey, response);
+      setTimeout(() => {
+        processingCache.delete(cacheKey);
+        console.log(`[CACHE] Resultado expirado para ${cacheKey}`);
+      }, 5 * 60 * 1000);
+
+      return response;
+    }).catch(error => {
+      console.error('[VENDAS-REAIS] Erro no processamento assíncrono:', error);
+      const errorResponse = {
+        success: false,
+        error: 'Erro no processamento',
+        details: error.message || 'Erro desconhecido'
+      };
+      processingCache.set(cacheKey, errorResponse);
+      return errorResponse;
+    });
+
+    // Aguardar por no máximo 8 segundos
+    const timeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('TIMEOUT')), 8000)
+    );
+
+    try {
+      // Tentar obter resultado em até 8 segundos
+      const resultado = await Promise.race([processamento, timeout]);
+      return res.json(resultado);
+    } catch (timeoutError) {
+      // Se der timeout, retornar resposta parcial e continuar processando em background
+      console.log(`[VENDAS-REAIS] ⚠️ Timeout de 8s - Processamento continua em background`);
+      
+      return res.json({
+        success: true,
+        processing: true,
+        message: 'Processamento iniciado. Dados serão calculados em background.',
+        data: {
+          vendas: 0,
+          pedidos: 0,
+          pedidosProcessados: 0,
+          statusBreakdown: {},
+          periodo: {
+            inicio: time_from ? new Date(time_from * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            fim: time_to ? new Date(time_to * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+          },
+          topProducts: [],
+          criterios: {
+            statusPedidosPagos: PEDIDOS_PAGOS_STATUSES,
+            statusNaoPagos: PEDIDOS_NAO_PAGOS_STATUSES,
+            metodo: 'processamento_assincrono_em_background',
+            periodo: time_from ? 'customizado' : 'ultimos_30_dias'
+          }
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('[VENDAS-REAIS] Erro geral:', error);
+    return res.status(500).json({
+      error: 'Erro interno do servidor',
+      details: error.message || 'Erro desconhecido'
+    });
+  }
+});
+
+// Endpoint para verificar status do processamento
+app.get('/api/shopee/vendas-reais/status/:shop_id', (req, res) => {
+  const { shop_id } = req.params;
+  const { time_from, time_to } = req.query;
+  
+  const cacheKey = `${shop_id}_${time_from || 'default'}_${time_to || 'default'}`;
+  
+  if (processingCache.has(cacheKey)) {
+    const result = processingCache.get(cacheKey);
+    return res.json({
+      ready: true,
+      result
+    });
+  }
+  
+  return res.json({
+    ready: false,
+    message: 'Processamento ainda em andamento'
+  });
+});
+
 // Adicionar handler específico para OPTIONS na rota whatsapp-express
 app.options('/api/whatsapp-express', (req, res) => {
   console.log('✅ OPTIONS preflight para /api/whatsapp-express');
@@ -4301,6 +4578,48 @@ module.exports = {
   gerarMensagemIntegracaoShopee
 };
 
+// Endpoint para processamento pesado de vendas Shopee (v2)
+// Evita timeout da Vercel Serverless
+app.post('/shopee/vendas-reais', async (req, res) => {
+  try {
+    const { access_token, shop_id, timeFrom, timeTo } = req.body;
+
+    if (!access_token || !shop_id) {
+      return res.status(400).json({ error: 'access_token e shop_id são obrigatórios' });
+    }
+
+    console.log('[MICRO] Iniciando cálculo de vendas reais para shop:', shop_id);
+    
+    const resultado = await calcularPedidosPagos30Dias(
+      access_token,
+      String(shop_id),
+      timeFrom ? Number(timeFrom) : undefined,
+      timeTo ? Number(timeTo) : undefined
+    );
+
+    console.log('[MICRO] Cálculo concluído com sucesso');
+    
+    res.json({
+      success: true,
+      data: {
+        vendas: resultado.totalVendas,
+        pedidos: resultado.totalPedidos,
+        pedidosProcessados: resultado.pedidosProcessados,
+        statusBreakdown: resultado.statusBreakdown,
+        periodo: resultado.periodo,
+        topProducts: resultado.topProducts
+      }
+    });
+
+  } catch (error) {
+    console.error('[MICRO] Erro ao calcular vendas:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Erro interno no processamento'
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Microserviço de análise rodando na porta ${PORT}`);
@@ -4321,4 +4640,6 @@ app.listen(PORT, () => {
   console.log(`🔄 NOVO: Análise ROBUSTA em: POST http://localhost:${PORT}/analise-csv-robusta`);
   console.log(`🧪 NOVO: Testar TODAS as soluções em: POST http://localhost:${PORT}/test-todas-solucoes`);
   console.log(`📱 Mensagem Integração Shopee: GET http://localhost:${PORT}/api/mensagem-integracao?clientName=Nome&analysisType=account`);
+  console.log(`💰 NOVO: Vendas Shopee (POST): http://localhost:${PORT}/api/shopee/vendas-reais`);
+  console.log(`📊 Status do Processamento (GET): http://localhost:${PORT}/api/shopee/vendas-reais/status/:shop_id`);
 });
