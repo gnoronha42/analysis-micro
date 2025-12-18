@@ -1160,6 +1160,125 @@ app.get('/api/dashboard/stats', async (req, res) => {
   }
 });
 
+// Rota para Análise de Conta com Dados Reais da Shopee (Busca Token no DB)
+app.post('/analise-conta-shopee', async (req, res) => {
+  let clientDb;
+  try {
+    const { clientId, timeFrom, timeTo, clientName } = req.body;
+
+    if (!clientId) {
+      return res.status(400).json({ error: 'clientId é obrigatório' });
+    }
+
+    console.log(`[MICRO] Gerando Análise de Conta Shopee para Cliente ID ${clientId}...`);
+
+    // 1. Buscar Credenciais no Banco
+    clientDb = await pool.connect();
+    const query = `
+      SELECT ci.shop_id, ci.access_token, c.name as client_name
+      FROM client_integrations ci
+      JOIN clients c ON ci.client_id = c.id
+      WHERE ci.client_id = $1 AND ci.provider = 'shopee'
+      LIMIT 1
+    `;
+    const result = await clientDb.query(query, [clientId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Integração Shopee não encontrada para este cliente' });
+    }
+
+    const { shop_id: shopId, access_token: accessToken, client_name: dbClientName } = result.rows[0];
+    const finalClientName = clientName || dbClientName;
+
+    // 2. Buscar Dados Reais (Vendas, Pedidos, Produtos) - Processamento Pesado
+    const dadosVendas = await calcularPedidosPagos30Dias(
+      accessToken,
+      String(shopId),
+      timeFrom,
+      timeTo
+    );
+
+    // 3. Montar Prompt com Dados Reais
+    const dadosFormatados = {
+      gmv: dadosVendas.totalVendas,
+      pedidos: dadosVendas.totalPedidos,
+      ticketMedio: dadosVendas.totalPedidos > 0 ? dadosVendas.totalVendas / dadosVendas.totalPedidos : 0,
+      visitantes: 0, 
+      topProducts: dadosVendas.topProducts.map(p => `- ${p.name} (${p.sales} vendas, R$ ${p.revenue.toFixed(2)})`).join('\n')
+    };
+
+    // 3. Montar Prompt Completo usando o Template Oficial
+    const dadosReaisTexto = `
+    👉 DADOS REAIS E ATUAIS DA CONTA PARA PREENCHIMENTO DO RELATÓRIO:
+    Loja: ${finalClientName}
+    Período: Últimos 30 dias (Dados extraídos via API)
+
+    METRICAS GERAIS:
+    - GMV (Faturamento): R$ ${dadosFormatados.gmv.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+    - Pedidos Pagos: ${dadosFormatados.pedidos}
+    - Ticket Médio: R$ ${dadosFormatados.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+    
+    TOP PRODUTOS (Ranking de Vendas):
+    ${dadosFormatados.topProducts}
+
+    ⚠️ INSTRUÇÃO CRÍTICA: 
+    Você DEVE gerar o relatório seguindo RIGOROSAMENTE a estrutura e formatação do modelo abaixo (ADVANCED_ACCOUNT_PROMPT).
+    Preencha os campos [VALOR] com os dados reais acima.
+    Para dados ausentes (Visitantes, Conversão, Ads), indique claramente que não foram obtidos via API, mas não quebre a estrutura do relatório.
+    `;
+
+    const finalPrompt = `
+    ${ADVANCED_ACCOUNT_PROMPT}
+
+    ${dadosReaisTexto}
+    `;
+
+    console.log('[MICRO] Enviando para OpenAI...');
+
+    const apiKey = process.env.OPEN_API_KEY || process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+        throw new Error('API Key da OpenAI não configurada (OPEN_API_KEY ou OPENAI_API_KEY)');
+    }
+    console.log(`[MICRO] Usando API Key: ${apiKey.substring(0, 5)}...`);
+
+    // 4. Chamar OpenAI
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4-turbo-preview",
+        messages: [
+          { role: "system", content: "Você é um consultor expert em Shopee. Siga estritamente o modelo de relatório fornecido." },
+          { role: "user", content: finalPrompt }
+        ],
+        temperature: 0.7
+      })
+    });
+
+    const aiData = await response.json();
+    
+    if (aiData.error) {
+      throw new Error(`OpenAI Error: ${aiData.error.message}`);
+    }
+
+    const markdown = aiData.choices[0].message.content;
+
+    res.json({
+      success: true,
+      markdown: markdown
+    });
+
+  } catch (error) {
+    console.error('[MICRO] Erro na Análise de Conta Shopee:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    if (clientDb) clientDb.release();
+  }
+});
+
 // Middleware adicional para headers CORS em todas as respostas
 app.use((req, res, next) => {
   const origin = req.headers.origin;
